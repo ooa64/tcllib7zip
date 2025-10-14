@@ -20,8 +20,8 @@ public:
 
 private:
 
-	C7ZipArchive *archive;
-	C7ZipInStream *stream;
+    C7ZipArchive *archive;
+    C7ZipInStream *stream;
     C7ZipMultiVolumes *volumes;
 
     int Info(Tcl_Obj *info);

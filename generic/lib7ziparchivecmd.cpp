@@ -84,7 +84,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
     case cmInfo:
 
         if (objc == 2) {
-            if (Valid() != TCL_OK)
+            if (!Valid())
                 return TCL_ERROR;
             if (Info(Tcl_GetObjResult(tclInterp)) != TCL_OK)
                 return TCL_ERROR;
@@ -98,7 +98,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
 
         if (objc == 2) {
             unsigned int count;
-            if (Valid() != TCL_OK)
+            if (!Valid())
                 return TCL_ERROR;
             if (!archive->GetItemCount(&count)) // NOTE: always OK
                 return TCL_ERROR;
@@ -343,9 +343,9 @@ int Lib7ZipArchiveCmd::Extract(Tcl_Obj *source, Tcl_Obj *destination, Tcl_Obj *p
 
 bool Lib7ZipArchiveCmd::Valid () {
     if (archive)
-        return TCL_OK;
+        return true;
     Tcl_SetObjResult(tclInterp, Tcl_NewStringObj("error opening archive", -1));
-    return TCL_ERROR;
+    return false;
 }
 
 typedef struct
