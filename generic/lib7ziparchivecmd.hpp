@@ -1,6 +1,7 @@
 #ifndef LIB7ZIPARCHIVECMD_H
 #define LIB7ZIPARCHIVECMD_H
 
+#include <codecvt>
 #include <lib7zip.h>
 #include <tcl.h>
 
@@ -24,6 +25,7 @@ private:
     C7ZipArchive *archive;
     Lib7ZipInStream *stream;
     Lib7ZipMultiVolumes *volumes;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
     int Info(Tcl_Obj *info);
     int List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flags, bool info);

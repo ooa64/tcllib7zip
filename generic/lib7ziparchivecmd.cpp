@@ -37,18 +37,15 @@ static const char *const Lib7ZipProperties[] = {
 
 Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
 
-int WChar_StringMatch(std::wstring wstr, char *pattern, int flags);
-int WChar_StringEqual(std::wstring wstr, char *str);
-
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, C7ZipInStream *stream):
-        TclCmd(interp, name), archive(archive), stream(stream), volumes(NULL) {
+        C7ZipArchive *archive, Lib7ZipInStream *stream):
+        TclCmd(interp, name), archive(archive), stream(stream), volumes(NULL), convert() {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", stream " << stream);
 };
 
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, C7ZipMultiVolumes *volumes):
-        TclCmd(interp, name), archive(archive), stream(NULL), volumes(volumes) {
+        C7ZipArchive *archive, Lib7ZipMultiVolumes *volumes):
+        TclCmd(interp, name), archive(archive), stream(NULL), volumes(volumes), convert() {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", volumes " << volumes);
 };
 
@@ -235,7 +232,7 @@ int Lib7ZipArchiveCmd::Info(Tcl_Obj *info) {
         std::wstring wstrval;
         if (archive->GetStringProperty((lib7zip::PropertyIndexEnum)prop, wstrval)) {
             Tcl_ListObjAppendElement(NULL, info, Tcl_NewStringObj(Lib7ZipProperties[prop], -1));
-            Tcl_ListObjAppendElement(NULL, info, Tcl_NewUnicodeObj((const Tcl_UniChar *)wstrval.c_str(), -1));
+            Tcl_ListObjAppendElement(NULL, info, Tcl_NewStringObj(convert.to_bytes(wstrval).c_str(), -1));
             continue;
         }
         UInt64 timeval;
@@ -262,7 +259,7 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
             continue;
         if (type == 'f' && item->IsDir())
             continue;
-        if (pattern && !WChar_StringMatch(item->GetFullPath(), Tcl_GetString(pattern), flags)) {
+        if (pattern && !Tcl_StringCaseMatch(convert.to_bytes(item->GetFullPath()).c_str(), Tcl_GetString(pattern), flags)) {
             continue;
         }
         if (info) {
@@ -283,7 +280,7 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
                 std::wstring wstrval;
                 if (item->GetStringProperty((lib7zip::PropertyIndexEnum)prop, wstrval)) {
                     Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(Lib7ZipProperties[prop], -1));
-                    Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewUnicodeObj((const Tcl_UniChar *)wstrval.c_str(), -1));
+                    Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(convert.to_bytes(wstrval).c_str(), -1));
                     continue;
                 }
                 UInt64 timeval;
@@ -297,7 +294,7 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
             Tcl_ListObjAppendElement(NULL, list, propObj);
         } else {
             Tcl_ListObjAppendElement(NULL, list,
-                    Tcl_NewUnicodeObj((const Tcl_UniChar *)item->GetFullPath().c_str(), -1));
+                    Tcl_NewStringObj(convert.to_bytes(item->GetFullPath()).c_str(), -1));
         }
     }
     return TCL_OK;
@@ -315,13 +312,14 @@ int Lib7ZipArchiveCmd::Extract(Tcl_Obj *source, Tcl_Obj *destination, Tcl_Obj *p
             return TCL_ERROR;
         if (item->IsDir())
             continue;
-        if (WChar_StringEqual(item->GetFullPath(), Tcl_GetString(source))) {
+
+        if (strcmp(convert.to_bytes(item->GetFullPath()).c_str(), Tcl_GetString(source)) == 0) {
             Lib7ZipOutStream *out = new Lib7ZipOutStream(tclInterp, destination, usechannel);
             if (!out->Valid())
                 result = TCL_ERROR;
             else
                 if (password) {  
-                    if (!archive->Extract(i, out, (wchar_t *)Tcl_GetUnicode(password)))
+                    if (!archive->Extract(i, out, convert.from_bytes(Tcl_GetString(password))))
                         result = TCL_ERROR;
                 } else {
                     if (!archive->Extract(i, out))
@@ -370,22 +368,4 @@ static Int64 Time_FileTimeToUnixTime64(UInt64 filetime)
         (UInt64)60 * 60 * 24 * (89 + 365 * (kUnixTimeStartYear - kFileTimeStartYear));
     const UInt64 winTime = GET_TIME_64(*(FILETIME*)&filetime);
     return (Int64)(winTime / kNumTimeQuantumsInSecond) - (Int64)kUnixTimeOffset;
-}
-
-static int WChar_StringMatch(std::wstring wstr, char *pattern, int flags) {
-    Tcl_DString ds;
-    Tcl_DStringInit(&ds);
-    char *s = Tcl_UniCharToUtfDString((const Tcl_UniChar *)wstr.c_str(), (int)wstr.size(), &ds);
-    int match = Tcl_StringCaseMatch(s, pattern, flags);
-    Tcl_DStringFree(&ds);
-    return match;
-}
-
-static int WChar_StringEqual(std::wstring wstr, char *str) {
-    Tcl_DString ds;
-    Tcl_DStringInit(&ds);
-    char *s = Tcl_UniCharToUtfDString((const Tcl_UniChar *)wstr.c_str(), (int)wstr.size(), &ds);
-    int equal = (strcmp(str, s) == 0);
-    Tcl_DStringFree(&ds);
-    return equal;
 }

@@ -8,7 +8,7 @@
 #endif
 
 Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *type, bool usechannel):
-        tclInterp(interp), tclChannel(NULL), name(L""), ext(L""), closechannel(!usechannel) {
+        tclInterp(interp), tclChannel(NULL), closechannel(!usechannel), name(L""), ext(L""), convert() {
     DEBUGLOG("Lib7ZipInStream to open " << Tcl_GetString(file) << " as chan " << usechannel);
     if (usechannel) {
         int mode;
@@ -35,9 +35,10 @@ Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *typ
             return;
         }
     }
-    name = (wchar_t *)Tcl_GetUnicode(file);
+    name = convert.from_bytes(Tcl_GetString(file)).c_str();
+    DEBUGLOG("Lib7ZipInStream name size " << name.size());
     if (type) {
-        ext = (wchar_t *)Tcl_GetUnicode(type);
+        ext = convert.from_bytes(Tcl_GetString(type)).c_str();
     } else if (!usechannel) {
         size_t dot = name.find_last_of(L".");
         if (dot != std::wstring::npos) {
@@ -46,9 +47,7 @@ Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *typ
                 ext = name.substr(dot+1);
         }
     }
-    DEBUGLOG("Lib7ZipInStream was open "
-        << Tcl_GetString(Tcl_NewUnicodeObj((const Tcl_UniChar *)name.c_str(), -1)) << " as "
-        << Tcl_GetString(Tcl_NewUnicodeObj((const Tcl_UniChar *)ext.c_str(), -1)));
+    DEBUGLOG("Lib7ZipInStream ext size " << ext.size());
 }
 
 Lib7ZipInStream::~Lib7ZipInStream() {
@@ -60,10 +59,10 @@ Lib7ZipInStream::~Lib7ZipInStream() {
 int Lib7ZipInStream::Read(void *data, unsigned int size, unsigned int *processedSize) {
     DEBUGLOG("Lib7ZipInStream::Read " << size);
     if (tclChannel) {
-        unsigned int read = Tcl_Read(tclChannel, (char *)data, size);
+        Tcl_Size read = Tcl_Read(tclChannel, (char *)data, (Tcl_Size)size);
         if (read >= 0) {
             if (processedSize)
-                *processedSize = read;
+                *processedSize = (unsigned int)read;
             return 0;
         }
     }
@@ -91,7 +90,7 @@ int Lib7ZipInStream::GetSize(UInt64 *size) {
 
 
 Lib7ZipOutStream::Lib7ZipOutStream(Tcl_Interp *interp, Tcl_Obj *file, bool usechannel):
-        tclInterp(interp), tclChannel(NULL), closechannel(!usechannel) {
+        tclInterp(interp), tclChannel(NULL), closechannel(!usechannel), convert() {
     DEBUGLOG("Lib7ZipOutStream to open " << Tcl_GetString(file) << " as chan " << usechannel);
     if (usechannel) {
         int mode;
@@ -130,10 +129,10 @@ Lib7ZipOutStream::~Lib7ZipOutStream() {
 int Lib7ZipOutStream::Write(const void *data, unsigned int size, unsigned int *processedSize) {
     DEBUGLOG("Lib7ZipOutStream::Write " << size);
     if (tclChannel) {
-        unsigned int wrote = Tcl_Write(tclChannel, (char *)data, size);
+        Tcl_Size wrote = Tcl_Write(tclChannel, (char *)data, (Tcl_Size)size);
         if (wrote >= 0) {
             if (processedSize)
-                *processedSize = wrote;
+                *processedSize = (unsigned int)wrote;
             return 0;
         }
     }
@@ -160,11 +159,11 @@ int Lib7ZipOutStream::SetSize(UInt64 size) {
 
 
 Lib7ZipMultiVolumes::Lib7ZipMultiVolumes(Tcl_Interp *interp, Tcl_Obj *path, Tcl_Obj *type):
-        tclInterp(interp), type(type), current(NULL), streams() {
+        tclInterp(interp), type(type), current(NULL), streams(), convert() {
     DEBUGLOG("Lib7ZipMultiVolumes");
     if (type)
         Tcl_IncrRefCount(type);
-    MoveToVolume((wchar_t *)Tcl_GetUnicode(path));
+    MoveToVolume(convert.from_bytes(Tcl_GetString(path)));
 }
 
 Lib7ZipMultiVolumes::~Lib7ZipMultiVolumes() {
@@ -190,7 +189,7 @@ bool Lib7ZipMultiVolumes::MoveToVolume(const wstring &volumeName) {
         }
     }
     if (current == NULL) {
-        Tcl_Obj *filename = Tcl_NewUnicodeObj((Tcl_UniChar *)volumeName.c_str(), -1);
+        Tcl_Obj *filename = Tcl_NewStringObj(convert.to_bytes(volumeName).c_str(), -1);
         Tcl_IncrRefCount(filename);
         current = new Lib7ZipInStream(tclInterp, filename, type, false);
         Tcl_DecrRefCount(filename);

@@ -1,6 +1,7 @@
 #ifndef LIB7ZIPSTREAM_H
 #define LIB7ZIPSTREAM_H
 
+#include <codecvt>
 #include <vector>
 #include <lib7zip.h>
 #include <tcl.h>
@@ -25,9 +26,10 @@ private:
 
     Tcl_Interp *tclInterp;
     Tcl_Channel tclChannel;
+    bool closechannel;
     std::wstring name;
     std::wstring ext;
-    bool closechannel;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 };
 
 class Lib7ZipOutStream:  public C7ZipOutStream {
@@ -49,6 +51,7 @@ private:
     Tcl_Interp *tclInterp;
     Tcl_Channel tclChannel;
     bool closechannel;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 };
 
 class Lib7ZipMultiVolumes:  public C7ZipMultiVolumes {
@@ -72,6 +75,7 @@ private:
     Tcl_Obj *type;
     Lib7ZipInStream *current;
     std::vector<Lib7ZipInStream *> streams;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 };
 
 #endif
