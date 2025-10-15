@@ -71,16 +71,17 @@ TEA_SETUP_COMPILER
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-TEA_ADD_SOURCES([tclsevenzip.cpp lib7zipcmd.cpp lib7ziparchivecmd.cpp tclcmd.cpp])
+TEA_ADD_SOURCES([tclsevenzip.cpp lib7zipcmd.cpp lib7ziparchivecmd.cpp lib7zipstream.cpp tclcmd.cpp])
 TEA_ADD_INCLUDES()
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([])
-TEA_ADD_LIBS([-Wl,--no-undefined -lstdc++ -l7zip])
+TEA_ADD_LIBS([-Wl,--no-undefined -lstdc++])
 TEA_ADD_CFLAGS([])
 TEA_ADD_STUB_SOURCES([])
 TEA_ADD_TCL_SOURCES([])
 
-tclsevenzip_SETUP_DEBUGLOG
+TCLSEVENZIP_SETUP_DEBUGLOG
+TCLSEVENZIP_CHECK_LIB7ZIP
 
 #--------------------------------------------------------------------
 # __CHANGE__

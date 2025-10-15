@@ -50,24 +50,24 @@ AC_DEFUN([TCLSEVENZIP_CHECK_LIB7ZIP], [
     fi
 
     AC_MSG_CHECKING([for 7zip source directory])
-    AC_ARG_WITH([7zipdir],
+    AC_ARG_WITH([src7zipdir],
         AS_HELP_STRING([--with-7zip=<dir>],
             [path to the 7zip source directory]
         ), [
-            7zipdir="$withval"
+            src7zipdir="$withval"
         ], [
             if test "$lib7zipdir" != "no"; then
-                7zipdir="$lib7zipdir/third_party/7zip"
+                src7zipdir="$lib7zipdir/third_party/7zip"
             else
-                7zipdir="no"
+                src7zipdir="no"
             fi
         ]
     )
-    AC_MSG_RESULT([$7zipdir])
+    AC_MSG_RESULT([$src7zipdir])
 
     AC_MSG_CHECKING([for 7zip/C/7zVersion.h])
-    if test "$7zipdir" != "no"; then
-        if test -f "$7zipdir/C/7zVersion.h"; then
+    if test "$src7zipdir" != "no"; then
+        if test -f "$src7zipdir/C/7zVersion.h"; then
             AC_MSG_RESULT([ok])
         else
             AC_MSG_RESULT([fail])
@@ -81,9 +81,9 @@ AC_DEFUN([TCLSEVENZIP_CHECK_LIB7ZIP], [
         TEA_ADD_INCLUDES([-I\"`${CYGPATH} $lib7zipdir/src`\"])
     fi
     if test "$lib7zipdir" != "no"; then
-        TEA_ADD_LIBS([-L"$lib7zipdir/src"])
+        TEA_ADD_LIBS([-L"$lib7zipdir/src" -L"$lib7zipdir/build/src" -l7zip])
     fi
-    if test "$7zipdir" != "no"; then
-        TEA_ADD_INCLUDES([-I\"`${CYGPATH} $7zipdir`\"])
+    if test "$src7zipdir" != "no"; then
+        TEA_ADD_INCLUDES([-I\"`${CYGPATH} $src7zipdir`\"])
     fi
 ])
