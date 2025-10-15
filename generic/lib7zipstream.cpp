@@ -7,9 +7,6 @@
 #   define DEBUGLOG(_x_)
 #endif
 
-// tclDecl.h
-EXTERN const char * TclGetExtension(const char *name);
-
 Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *type, bool usechannel):
         tclInterp(interp), tclChannel(NULL), name(L""), ext(L""), closechannel(!usechannel) {
     DEBUGLOG("Lib7ZipInStream to open " << Tcl_GetString(file) << " as chan " << usechannel);
@@ -42,12 +39,11 @@ Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *typ
     if (type) {
         ext = (wchar_t *)Tcl_GetUnicode(type);
     } else if (!usechannel) {
-        const char *e = TclGetExtension(Tcl_GetString(file));
-        if (e && *e == '.') {
-            Tcl_DString ds;
-            Tcl_DStringInit(&ds);
-            ext = (wchar_t *)Tcl_UtfToUniCharDString(e + 1, -1, &ds);
-            Tcl_DStringFree(&ds);
+        size_t dot = name.find_last_of(L".");
+        if (dot != std::wstring::npos) {
+            size_t sep = name.find_last_of(L"/\\:");
+            if (sep == std::wstring::npos || sep < dot)
+                ext = name.substr(dot+1);
         }
     }
     DEBUGLOG("Lib7ZipInStream was open "
@@ -164,7 +160,7 @@ int Lib7ZipOutStream::SetSize(UInt64 size) {
 
 
 Lib7ZipMultiVolumes::Lib7ZipMultiVolumes(Tcl_Interp *interp, Tcl_Obj *path, Tcl_Obj *type):
-        tclInterp(interp), type(type), streams(), current(NULL) {
+        tclInterp(interp), type(type), current(NULL), streams() {
     DEBUGLOG("Lib7ZipMultiVolumes");
     if (type)
         Tcl_IncrRefCount(type);

@@ -23,11 +23,11 @@ public:
 
 private:
 
-    bool closechannel;
-    std::wstring ext;
-    std::wstring name;
-    Tcl_Channel tclChannel;
     Tcl_Interp *tclInterp;
+    Tcl_Channel tclChannel;
+    std::wstring name;
+    std::wstring ext;
+    bool closechannel;
 };
 
 class Lib7ZipOutStream:  public C7ZipOutStream {
@@ -46,9 +46,9 @@ public:
 
 private:
 
-    bool closechannel;
-    Tcl_Channel tclChannel;
     Tcl_Interp *tclInterp;
+    Tcl_Channel tclChannel;
+    bool closechannel;
 };
 
 class Lib7ZipMultiVolumes:  public C7ZipMultiVolumes {
@@ -68,10 +68,10 @@ public:
 
 private:
 
-    std::vector<Lib7ZipInStream *> streams;
-    Lib7ZipInStream *current;
-    Tcl_Obj *type;
     Tcl_Interp *tclInterp;
+    Tcl_Obj *type;
+    Lib7ZipInStream *current;
+    std::vector<Lib7ZipInStream *> streams;
 };
 
 #endif

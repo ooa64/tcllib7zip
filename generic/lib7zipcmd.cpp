@@ -78,7 +78,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                 if (Tcl_GetIndexFromObj(tclInterp, objv[i], options, "option", 0, &index) != TCL_OK) {
                     return TCL_ERROR;
                 }
-                switch ((enum commands)(index)) {
+                switch ((enum options)(index)) {
                 case opMultivolume:
                     multivolume = true;
                     break;

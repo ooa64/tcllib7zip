@@ -1,5 +1,5 @@
-#include <string.h>
 #include "lib7ziparchivecmd.hpp"
+#include "lib7zipstream.hpp"
 
 #if defined(LIB7ZIPARCHIVECMD_DEBUG)
 #   include <iostream>
@@ -35,19 +35,19 @@ static const char *const Lib7ZipProperties[] = {
     0L
 };
 
-static Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
+Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
 
-static int WChar_StringMatch(std::wstring wstr, char *pattern, int flags);
-static int WChar_StringEqual(std::wstring wstr, char *str);
+int WChar_StringMatch(std::wstring wstr, char *pattern, int flags);
+int WChar_StringEqual(std::wstring wstr, char *str);
 
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, Lib7ZipInStream *stream):
+        C7ZipArchive *archive, C7ZipInStream *stream):
         TclCmd(interp, name), archive(archive), stream(stream), volumes(NULL) {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", stream " << stream);
 };
 
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, Lib7ZipMultiVolumes *volumes):
+        C7ZipArchive *archive, C7ZipMultiVolumes *volumes):
         TclCmd(interp, name), archive(archive), stream(NULL), volumes(volumes) {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", volumes " << volumes);
 };
@@ -131,7 +131,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     patternObj = objv[i];
                     break;
                 }
-                switch ((enum options)(index)) {
+                switch ((enum commands)(index)) {
                 case opInfo:
                     info = true;
                     continue;

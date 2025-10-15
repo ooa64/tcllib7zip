@@ -5,24 +5,25 @@
 #include <tcl.h>
 
 #include "tclcmd.hpp"
+#include "lib7zipstream.hpp"
 
 class Lib7ZipArchiveCmd : public TclCmd {
 
 public:
 
     Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, C7ZipInStream *stream);
+        C7ZipArchive *archive, Lib7ZipInStream *stream);
 
     Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
-        C7ZipArchive *archive, C7ZipMultiVolumes *volumes);
+        C7ZipArchive *archive, Lib7ZipMultiVolumes *volumes);
 
     virtual ~Lib7ZipArchiveCmd();
 
 private:
 
     C7ZipArchive *archive;
-    C7ZipInStream *stream;
-    C7ZipMultiVolumes *volumes;
+    Lib7ZipInStream *stream;
+    Lib7ZipMultiVolumes *volumes;
 
     int Info(Tcl_Obj *info);
     int List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flags, bool info);
