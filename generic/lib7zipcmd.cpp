@@ -9,10 +9,6 @@
 #   define DEBUGLOG(_x_)
 #endif
 
-#ifndef Tcl_Size
-#define Tcl_Size int
-#endif
-
 int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
     static const char *const commands[] = {
         "initialized", "extensions", "open", 0L
@@ -72,8 +68,8 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
             bool multivolume = false;
             bool detecttype = false;
             bool usechannel = false;
+            std::wstring password = L"";
             Tcl_Obj *forcetype = NULL;
-            Tcl_Obj *password = NULL;
             for (int i = 2; i < objc - 1; i++) {
                 if (Tcl_GetIndexFromObj(tclInterp, objv[i], options, "option", 0, &index) != TCL_OK) {
                     return TCL_ERROR;
@@ -96,7 +92,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     break;
                 case opPassword:
                     if (i < objc - 2) {
-                        password = objv[++i];
+                        password = convert.from_bytes(Tcl_GetString(objv[++i])).c_str();
                     } else {
                         Tcl_SetObjResult(tclInterp, Tcl_NewStringObj(
                             "\"-password\" option must be followed by password", -1));
@@ -131,8 +127,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     delete volumes;
                     return TCL_ERROR;
                 }
-                if (!lib.OpenMultiVolumeArchive(volumes, &archive,
-                        password ? (wchar_t *)Tcl_GetUnicode(password) : L"", detecttype)) {
+                if (!lib.OpenMultiVolumeArchive(volumes, &archive, password, detecttype)) {
                     LastError();
                     delete volumes;
                     return TCL_ERROR;
@@ -145,8 +140,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     delete stream;
                     return TCL_ERROR;
                 }
-                if (!lib.OpenArchive(stream, &archive,
-                        password ? (wchar_t *)Tcl_GetUnicode(password) : L"", detecttype)) {
+                if (!lib.OpenArchive(stream, &archive, password, detecttype)) {
                     LastError();
                     delete stream;
                     return TCL_ERROR;
@@ -180,7 +174,7 @@ int Lib7ZipCmd::SupportedExts (Tcl_Obj *exts) {
     if (lib.GetSupportedExts(a)) {
         for(size_t i = 0; i < a.size(); i++) {
             Tcl_ListObjAppendElement(tclInterp, exts,
-                Tcl_NewUnicodeObj((const Tcl_UniChar *)a[i].c_str(), (Tcl_Size)a[i].size()));
+                Tcl_NewStringObj(convert.to_bytes(a[i]).c_str(), -1));
         }
         return TCL_OK;
     }
