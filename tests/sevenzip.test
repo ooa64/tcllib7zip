@@ -289,20 +289,20 @@ test lib7zip-4.11 {complex list} -constraints have7zip -setup {
 } -cleanup {
     $cmd close
 } -result {testDIRS
-testDIRS\test1
-testDIRS\test2
-testDIRS\test3
-testDIRS\test3\test31
-testDIRS\test3\test32
-testDIRS\test3\test33
-testDIRS\test3\test33\test331
-testDIRS\test2\test21.txt
-testDIRS\test2\test22.txt
-testDIRS\test2\test23.txt
-testDIRS\test3\test32\test321.txt
-testDIRS\test4.txt
-testDIRS\test5.txt
-testDIRS\test6.txt}
+testDIRS/test1
+testDIRS/test2
+testDIRS/test3
+testDIRS/test3/test31
+testDIRS/test3/test32
+testDIRS/test3/test33
+testDIRS/test3/test33/test331
+testDIRS/test2/test21.txt
+testDIRS/test2/test22.txt
+testDIRS/test2/test23.txt
+testDIRS/test3/test32/test321.txt
+testDIRS/test4.txt
+testDIRS/test5.txt
+testDIRS/test6.txt}
 
 test lib7zip-4.12 {complex list files} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
@@ -310,13 +310,13 @@ test lib7zip-4.12 {complex list files} -constraints have7zip -setup {
     join [$cmd list -type f] \n
 } -cleanup {
     $cmd close
-} -result {testDIRS\test2\test21.txt
-testDIRS\test2\test22.txt
-testDIRS\test2\test23.txt
-testDIRS\test3\test32\test321.txt
-testDIRS\test4.txt
-testDIRS\test5.txt
-testDIRS\test6.txt}
+} -result {testDIRS/test2/test21.txt
+testDIRS/test2/test22.txt
+testDIRS/test2/test23.txt
+testDIRS/test3/test32/test321.txt
+testDIRS/test4.txt
+testDIRS/test5.txt
+testDIRS/test6.txt}
 
 test lib7zip-4.13 {complex list dirs} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
@@ -325,21 +325,21 @@ test lib7zip-4.13 {complex list dirs} -constraints have7zip -setup {
 } -cleanup {
     $cmd close
 } -result {testDIRS
-testDIRS\test1
-testDIRS\test2
-testDIRS\test3
-testDIRS\test3\test31
-testDIRS\test3\test32
-testDIRS\test3\test33
-testDIRS\test3\test33\test331}
+testDIRS/test1
+testDIRS/test2
+testDIRS/test3
+testDIRS/test3/test31
+testDIRS/test3/test32
+testDIRS/test3/test33
+testDIRS/test3/test33/test331}
 
 test lib7zip-4.14 {complex list mask} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
 } -body {
-    join [$cmd list -nocase -type d {*\\*\\*\\*T3*}] \n
+    join [$cmd list -nocase -type d {*/*/*/*T3*}] \n
 } -cleanup {
     $cmd close
-} -result {testDIRS\test3\test33\test331}
+} -result {testDIRS/test3/test33/test331}
 
 test lib7zip-4.15 {complex detailed list} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
@@ -348,20 +348,20 @@ test lib7zip-4.15 {complex detailed list} -constraints have7zip -setup {
 } -cleanup {
     $cmd close
 } -result {packsize 0 attrib 16 mtime 1759411690 encrypted 0 path testDIRS isdir 1 size 0
-packsize 0 attrib 16 mtime 1759410798 encrypted 0 path {testDIRS\test1} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759411705 encrypted 0 path {testDIRS\test2} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759410901 encrypted 0 path {testDIRS\test3} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759410880 encrypted 0 path {testDIRS\test3\test31} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759411673 encrypted 0 path {testDIRS\test3\test32} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759410923 encrypted 0 path {testDIRS\test3\test33} isdir 1 size 0
-packsize 0 attrib 16 mtime 1759410923 encrypted 0 path {testDIRS\test3\test33\test331} isdir 1 size 0
-packsize 26 attrib 32 mtime 1759410852 encrypted 0 path {testDIRS\test2\test21.txt} isdir 0 size 6
-attrib 32 mtime 1759410861 encrypted 0 path {testDIRS\test2\test22.txt} isdir 0 size 6
-attrib 32 mtime 1759411705 encrypted 0 path {testDIRS\test2\test23.txt} isdir 0 size 6
-attrib 32 mtime 1759411673 encrypted 0 path {testDIRS\test3\test32\test321.txt} isdir 0 size 7
-attrib 32 mtime 1759410820 encrypted 0 path {testDIRS\test4.txt} isdir 0 size 5
-attrib 32 mtime 1759411684 encrypted 0 path {testDIRS\test5.txt} isdir 0 size 5
-attrib 32 mtime 1759411690 encrypted 0 path {testDIRS\test6.txt} isdir 0 size 5}
+packsize 0 attrib 16 mtime 1759410798 encrypted 0 path testDIRS/test1 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759411705 encrypted 0 path testDIRS/test2 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759410901 encrypted 0 path testDIRS/test3 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759410880 encrypted 0 path testDIRS/test3/test31 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759411673 encrypted 0 path testDIRS/test3/test32 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759410923 encrypted 0 path testDIRS/test3/test33 isdir 1 size 0
+packsize 0 attrib 16 mtime 1759410923 encrypted 0 path testDIRS/test3/test33/test331 isdir 1 size 0
+packsize 26 attrib 32 mtime 1759410852 encrypted 0 path testDIRS/test2/test21.txt isdir 0 size 6
+attrib 32 mtime 1759410861 encrypted 0 path testDIRS/test2/test22.txt isdir 0 size 6
+attrib 32 mtime 1759411705 encrypted 0 path testDIRS/test2/test23.txt isdir 0 size 6
+attrib 32 mtime 1759411673 encrypted 0 path testDIRS/test3/test32/test321.txt isdir 0 size 7
+attrib 32 mtime 1759410820 encrypted 0 path testDIRS/test4.txt isdir 0 size 5
+attrib 32 mtime 1759411684 encrypted 0 path testDIRS/test5.txt isdir 0 size 5
+attrib 32 mtime 1759411690 encrypted 0 path testDIRS/test6.txt isdir 0 size 5}
 
 test lib7zip-4.16 {intl list} -constraints {have7zip encodingOk} -setup {
     set cmd [sevenzip open [file join [testsDirectory] files тест.7z]]
@@ -370,8 +370,8 @@ test lib7zip-4.16 {intl list} -constraints {have7zip encodingOk} -setup {
 } -cleanup {
     $cmd close
 } -result {тест
-тест\тест1
-тест\тест1\тест1.txt}
+тест/тест1
+тест/тест1/тест1.txt}
 
 test lib7zip-4.17 {intl detailed list} -constraints {have7zip encodingOk} -setup {
     set cmd [sevenzip open [file join [testsDirectory] files тест.7z]]
@@ -380,8 +380,8 @@ test lib7zip-4.17 {intl detailed list} -constraints {have7zip encodingOk} -setup
 } -cleanup {
     $cmd close
 } -result {packsize 0 attrib 16 mtime 1759411064 encrypted 0 path тест isdir 1 size 0
-packsize 0 attrib 16 mtime 1759818836 encrypted 0 path {тест\тест1} isdir 1 size 0
-packsize 14 attrib 32 mtime 1759818836 encrypted 0 path {тест\тест1\тест1.txt} isdir 0 size 9}
+packsize 0 attrib 16 mtime 1759818836 encrypted 0 path тест/тест1 isdir 1 size 0
+packsize 14 attrib 32 mtime 1759818836 encrypted 0 path тест/тест1/тест1.txt isdir 0 size 9}
 
 test lib7zip-4.18 {intl list match} -constraints {have7zip encodingOk} -setup {
     set cmd [sevenzip open [file join [testsDirectory] files тест.7z]]
@@ -389,7 +389,7 @@ test lib7zip-4.18 {intl list match} -constraints {have7zip encodingOk} -setup {
     join [$cmd list -nocase *Т1.???] \n
 } -cleanup {
     $cmd close
-} -result {тест\тест1\тест1.txt}
+} -result {тест/тест1/тест1.txt}
 
 test lib7zip-4.19 {encrypted archive list} -constraints have7zip -setup {
     set cmd [sevenzip open -p TEST [file join [testsDirectory] files testPWD0.7z]]
@@ -523,7 +523,7 @@ test lib7zip-5.6 {extract data with path} -constraints {have7zip} -setup {
     set out [file join [temporaryDirectory] test.txt]
     writeFile $out "TEST"
 } -body {
-    $cmd extract testDIRS\\test3\\test32\\test321.txt $out
+    $cmd extract testDIRS/test3/test32/test321.txt $out
     readFile $out
 } -cleanup {
     $cmd close
@@ -535,7 +535,7 @@ test lib7zip-5.7 {extract intl} -constraints {have7zip encodingOk} -setup {
     set out [file join [temporaryDirectory] тест.txt]
     writeFile $out "TEST"
 } -body {
-    $cmd extract тест\\тест1\\тест1.txt $out
+    $cmd extract тест/тест1/тест1.txt $out
     readFile $out
 } -cleanup {
     $cmd close
@@ -609,14 +609,14 @@ test lib7zip-6.3 {list multivolume} -constraints {have7zip} -setup {
     $cmd list
 } -cleanup {
     $cmd close
-} -result {test {test\test.txt}}
+} -result {test test/test.txt}
 
 test lib7zip-6.4 {extract multivolume} -constraints {have7zip} -setup {
     set cmd [sevenzip open -f 001 -m [file join [testsDirectory] files testMVOL.7z.001]]
     set out [file join [temporaryDirectory] test.txt]
     writeFile $out "TEST"
 } -body {
-    $cmd extract test\\test.txt $out
+    $cmd extract test/test.txt $out
     string length [readFile $out]
 } -cleanup {
     $cmd close
