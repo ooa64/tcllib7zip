@@ -36,16 +36,10 @@ static const char *const Lib7ZipProperties[] = {
     0L
 };
 
-// NOTE: from tclInt.h
-typedef enum {
-    TCL_PLATFORM_UNIX = 0,      /* Any Unix-like OS. */
-    TCL_PLATFORM_WINDOWS = 2    /* Any Microsoft Windows OS. */
-} TclPlatformType;
-
-EXTERN TclPlatformType* TclGetPlatform(void);
-
 static Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
-static std::string Path_NativePathToUnixPath(std::string path);
+#ifdef _WIN32
+static std::string Path_WindowsPathToUnixPath(std::string path);
+#endif
 
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
         C7ZipArchive *archive, Lib7ZipInStream *stream):
@@ -270,8 +264,11 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
         if (type == 'f' && item->IsDir())
             continue;
 
-        std::string path = Path_NativePathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
-
+#ifdef _WIN32
+        std::string path = Path_WindowsPathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
+#else
+        std::string path = convert.to_bytes(item->GetFullPath()).c_str();
+#endif
         if (pattern && !Tcl_StringCaseMatch(path.c_str(), Tcl_GetString(pattern), flags)) {
             continue;
         }
@@ -292,12 +289,13 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
                 }
                 std::wstring wstrval;
                 if (item->GetStringProperty((lib7zip::PropertyIndexEnum)prop, wstrval)) {
-                    Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(Lib7ZipProperties[prop], -1));
+                    std::string strval = convert.to_bytes(wstrval);
+#ifdef _WIN32
                     if (prop == lib7zip::kpidPath)
-                        Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(
-                                Path_NativePathToUnixPath(convert.to_bytes(wstrval)).c_str(), -1));
-                    else
-                        Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(convert.to_bytes(wstrval).c_str(), -1));
+                        strval = Path_WindowsPathToUnixPath(strval);
+#endif
+                    Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(Lib7ZipProperties[prop], -1));
+                    Tcl_ListObjAppendElement(NULL, propObj, Tcl_NewStringObj(strval.c_str(), -1));
                     continue;
                 }
                 UInt64 timeval;
@@ -330,8 +328,11 @@ int Lib7ZipArchiveCmd::Extract(Tcl_Obj *source, Tcl_Obj *destination, Tcl_Obj *p
         if (item->IsDir())
             continue;
 
-        std::string path = Path_NativePathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
-
+#ifdef _WIN32
+        std::string path = Path_WindowsPathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
+#else
+        std::string path = convert.to_bytes(item->GetFullPath()).c_str();
+#endif
         if (strcmp(path.c_str(), Tcl_GetString(source)) == 0) {
             Lib7ZipOutStream *out = new Lib7ZipOutStream(tclInterp, destination, usechannel);
             if (!out->Valid())
@@ -389,15 +390,14 @@ static Int64 Time_FileTimeToUnixTime64(UInt64 filetime)
     return (Int64)(winTime / kNumTimeQuantumsInSecond) - (Int64)kUnixTimeOffset;
 }
 
-static std::string Path_NativePathToUnixPath(std::string path) {
-    TclPlatformType *platform = TclGetPlatform();
-    if (*platform == TCL_PLATFORM_WINDOWS) {
-        for (int i = 0; i < path.size(); i++)
-            if (path[i] == '\\')
-                if (i < (path.size()-1) && path[i+1] == '\\')
-                    i++;
-                else
-                    path[i] = '/';
-    }
+#ifdef _WIN32
+static std::string Path_WindowsPathToUnixPath(std::string path) {
+    for (int i = 0; i < path.size(); i++)
+    if (path[i] == '\\')
+        if (i < (path.size()-1) && path[i+1] == '\\')
+            i++;
+        else
+            path[i] = '/';
     return path;
 }
+#endif

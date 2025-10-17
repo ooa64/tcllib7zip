@@ -42,7 +42,11 @@ Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *typ
     } else if (!usechannel) {
         size_t dot = name.find_last_of(L".");
         if (dot != std::wstring::npos) {
+#ifdef _WIN32
             size_t sep = name.find_last_of(L"/\\:");
+#else
+            size_t sep = name.find_last_of(L"/");
+#endif
             if (sep == std::wstring::npos || sep < dot)
                 ext = name.substr(dot+1);
         }
