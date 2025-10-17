@@ -1,6 +1,7 @@
 #ifndef LIB7ZIPCMD_H
 #define LIB7ZIPCMD_H
 
+#include <locale>
 #include <codecvt>
 #include <lib7zip.h>
 #include <tcl.h>

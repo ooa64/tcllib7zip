@@ -5027,7 +5027,7 @@ else
 fi
 
     if test "$tcl_ok" = "yes"; then
-	CFLAGS_DEBUGLOG="-DTCLCMD_DEBUG -DTCLLIB7ZIP_DEBUG -DTCLLIB7ZIPARCHIVE_DEBUG"
+	CFLAGS_DEBUGLOG="-DTCLCMD_DEBUG -DLIB7ZIPCMD_DEBUG -DLIB7ZIPARCHIVECMD_DEBUG -DLIB7ZIPSTREAM_DEBUG"
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     else

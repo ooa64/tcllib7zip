@@ -1,3 +1,4 @@
+#include <string.h>
 #include "lib7ziparchivecmd.hpp"
 #include "lib7zipstream.hpp"
 
@@ -35,7 +36,7 @@ static const char *const Lib7ZipProperties[] = {
     0L
 };
 
-Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
+static Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
 
 Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
         C7ZipArchive *archive, Lib7ZipInStream *stream):
@@ -128,7 +129,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     patternObj = objv[i];
                     break;
                 }
-                switch ((enum commands)(index)) {
+                switch ((enum options)(index)) {
                 case opInfo:
                     info = true;
                     continue;

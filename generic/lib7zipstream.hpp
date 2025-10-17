@@ -1,6 +1,7 @@
 #ifndef LIB7ZIPSTREAM_H
 #define LIB7ZIPSTREAM_H
 
+#include <locale>
 #include <codecvt>
 #include <vector>
 #include <lib7zip.h>

@@ -1,6 +1,7 @@
 #ifndef LIB7ZIPARCHIVECMD_H
 #define LIB7ZIPARCHIVECMD_H
 
+#include <locale>
 #include <codecvt>
 #include <lib7zip.h>
 #include <tcl.h>
