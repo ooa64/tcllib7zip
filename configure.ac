@@ -75,7 +75,7 @@ TEA_ADD_SOURCES([tclsevenzip.cpp lib7zipcmd.cpp lib7ziparchivecmd.cpp lib7zipstr
 TEA_ADD_INCLUDES()
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([])
-TEA_ADD_LIBS([-Wl,--no-undefined -lstdc++])
+TEA_ADD_LIBS([-lstdc++])
 TEA_ADD_CFLAGS([])
 TEA_ADD_STUB_SOURCES([])
 TEA_ADD_TCL_SOURCES([])
