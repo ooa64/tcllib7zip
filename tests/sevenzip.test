@@ -623,5 +623,16 @@ test lib7zip-6.4 {extract multivolume} -constraints {have7zip} -setup {
     file delete $out
 } -result {1024}
 
+foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar 4 .arj} {
+    test lib7zip-7.$n "look into $x" -constraints have7zip -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files test$x]]
+    } -body {
+        $cmd list
+    } -cleanup {
+        $cmd close
+    } -result {test.txt}
+    unset n x
+}
+
 
 cleanupTests
