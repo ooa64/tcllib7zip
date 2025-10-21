@@ -624,7 +624,7 @@ test lib7zip-6.4 {extract multivolume} -constraints {have7zip} -setup {
 } -result {1024}
 
 foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar 4 .arj} {
-    test lib7zip-7.$n "look into $x" -constraints have7zip -setup {
+    test lib7zip-7.0.$n "look into $x" -constraints have7zip -setup {
         set cmd [sevenzip open [file join [testsDirectory] files test$x]]
     } -body {
         $cmd list
@@ -633,6 +633,70 @@ foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar 4 .arj} {
     } -result {test.txt}
     unset n x
 }
+
+foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar 4 .arj} {
+    test lib7zip-7.1.$n "look into $x (autodetect)" -constraints have7zip -setup {
+        set cmd [sevenzip open -d [file join [testsDirectory] files test$x]]
+    } -body {
+        $cmd list
+    } -cleanup {
+        $cmd close
+    } -result {test.txt}
+    unset n x
+}
+
+foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar 4 .arj} {
+    test lib7zip-7.2.$n "extract data from $x" -constraints {have7zip} -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files test$x]]
+        set out [file join [temporaryDirectory] test.txt]
+    } -body {
+        $cmd extract test.txt $out
+        readFile $out
+    } -cleanup {
+        $cmd close
+        file delete $out
+    } -result {test}
+    unset n x
+}
+
+foreach {n x} {0 .7z 1 .zip 2 .rar 3 .tar} {
+    test lib7zip-7.3.$n "look into $x (subdirs)" -constraints have7zip -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files testDIRS$x]]
+    } -body {
+        join [lsort [$cmd list]] \n
+    } -cleanup {
+        $cmd close
+    } -result {testDIRS
+testDIRS/test1
+testDIRS/test2
+testDIRS/test2/test21.txt
+testDIRS/test2/test22.txt
+testDIRS/test2/test23.txt
+testDIRS/test3
+testDIRS/test3/test31
+testDIRS/test3/test32
+testDIRS/test3/test32/test321.txt
+testDIRS/test3/test33
+testDIRS/test3/test33/test331
+testDIRS/test4.txt
+testDIRS/test5.txt
+testDIRS/test6.txt}
+    unset n x
+}
+
+test lib7zip-7.3.4 "look into arj (subdirs, no empty ones)" -constraints have7zip -setup {
+    set cmd [sevenzip open [file join [testsDirectory] files testDIRS.arj]]
+} -body {
+    join [lsort [$cmd list]] \n
+} -cleanup {
+    $cmd close
+} -result {testDIRS/test2/test21.txt
+testDIRS/test2/test22.txt
+testDIRS/test2/test23.txt
+testDIRS/test3/test32/test321.txt
+testDIRS/test4.txt
+testDIRS/test5.txt
+testDIRS/test6.txt}
 
 
 cleanupTests
