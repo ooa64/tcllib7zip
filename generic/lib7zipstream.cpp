@@ -8,7 +8,7 @@
 #endif
 
 Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *type, bool usechannel):
-        tclInterp(interp), tclChannel(NULL), closechannel(!usechannel), name(L""), ext(L""), convert() {
+        tclInterp(interp), tclChannel(NULL), closechannel(!usechannel), end(-1), name(L""), ext(L""), convert() {
     DEBUGLOG("Lib7ZipInStream to open " << Tcl_GetString(file) << " as chan " << usechannel);
     if (usechannel) {
         int mode;
@@ -32,6 +32,22 @@ Lib7ZipInStream::Lib7ZipInStream(Tcl_Interp *interp, Tcl_Obj *file, Tcl_Obj *typ
         if (tclChannel == NULL) {
             Tcl_SetObjResult(tclInterp, Tcl_ObjPrintf(
                 "couldn't read file \"%s\": %s", Tcl_GetString(file), Tcl_PosixError(tclInterp)));
+            return;
+        }
+    }
+    {
+        Tcl_WideInt pos = Tcl_Tell(tclChannel);
+        if (pos >= 0) {
+            end = Tcl_Seek(tclChannel, 0, SEEK_END);
+            if (end >= 0)
+                pos = Tcl_Seek(tclChannel, pos, SEEK_SET);
+        }
+        if (pos < 0 || end < 0) {
+            Tcl_SetObjResult(tclInterp, Tcl_ObjPrintf(
+                "couldn't seek on \"%s\": %s", Tcl_GetString(file), Tcl_PosixError(tclInterp)));
+            if (closechannel)
+                Tcl_Close(tclInterp, tclChannel);
+            tclChannel = NULL;
             return;
         }
     }
@@ -87,9 +103,13 @@ int Lib7ZipInStream::Seek(__int64 offset, unsigned int seekOrigin, UInt64 *newPo
 }
 
 int Lib7ZipInStream::GetSize(UInt64 *size) {
-    Tcl_Panic("Lib7ZipInStream::GetSize");
-    // NOTE: dummy, not used by lib7zip
-    return -1;
+    DEBUGLOG("Lib7ZipInStream::GetSize => " << end);
+    if (tclChannel) {
+        if (size)
+            *size = end;
+        return 0;
+    }
+    return 1;
 }
 
 

@@ -28,6 +28,7 @@ private:
     Tcl_Interp *tclInterp;
     Tcl_Channel tclChannel;
     bool closechannel;
+    UInt64 end;
     std::wstring name;
     std::wstring ext;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
