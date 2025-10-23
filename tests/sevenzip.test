@@ -114,6 +114,10 @@ test lib7zip-2.2.6 {open nonreadable channel} -constraints have7zip -setup {
     close $chn
 } -returnCodes 1 -result {channel "*" wasn't opened for reading} -match glob
 
+test lib7zip-2.2.7 {open nonseekable channel} -constraints have7zip -body {
+    sevenzip open -c stdin
+} -returnCodes 1 -result {couldn't seek on "stdin": invalid argument}
+
 test lib7zip-2.6 {open by force type} -constraints have7zip -body {
     set cmd [sevenzip open -forcetype 7z [file join [testsDirectory] files test.7z]]
 } -cleanup {
