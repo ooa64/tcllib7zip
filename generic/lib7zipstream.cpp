@@ -225,7 +225,7 @@ bool Lib7ZipMultiVolumes::MoveToVolume(const wstring &volumeName) {
 
 UInt64 Lib7ZipMultiVolumes::GetCurrentVolumeSize() {
     Tcl_Panic("Lib7ZipMultiVolumes::GetCurrentVolumeSize!");
-    return -1;
+    return current ? current->GetSize() : -1;
 };
 
 C7ZipInStream *Lib7ZipMultiVolumes::OpenCurrentVolumeStream() {
