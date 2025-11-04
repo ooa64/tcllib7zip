@@ -4,6 +4,7 @@ package require tcltest
 namespace import ::tcltest::*
 
 testConstraint have7zip [sevenzip initialized]
+testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
 if {[info proc readFile] eq ""} {
@@ -210,6 +211,21 @@ test lib7zip-4.3 {command list} -constraints have7zip -setup {
     $cmd list
 } -cleanup {
     $cmd close
+} -result {test.txt}
+
+test lib7zip-4.3.0 {command list using memchan} -constraints {have7zip haveMemchan} -setup {
+    set fd [open [file join [testsDirectory] files test.7z] rb]
+    set in [tcl::chan::memchan]
+    fconfigure $in -translation binary
+    puts -nonewline $in [read $fd]
+    close $fd
+    seek $in 0
+    set cmd [sevenzip open -f 7z -c $in]
+} -body {
+    $cmd list
+} -cleanup {
+    $cmd close
+    close $in
 } -result {test.txt}
 
 test lib7zip-4.3.1 {command list from channel forcetype} -constraints have7zip -setup {
@@ -618,6 +634,7 @@ test lib7zip-6.3 {list multivolume} -constraints {have7zip} -setup {
 test lib7zip-6.4 {extract multivolume} -constraints {have7zip} -setup {
     set cmd [sevenzip open -f 001 -m [file join [testsDirectory] files testMVOL.7z.001]]
     set out [file join [temporaryDirectory] test.txt]
+    catch {file delete $out}
     writeFile $out "TEST"
 } -body {
     $cmd extract test/test.txt $out
@@ -702,5 +719,41 @@ testDIRS/test4.txt
 testDIRS/test5.txt
 testDIRS/test6.txt}
 
+test lib7zip-7.3.5.0 "look into tgz" -constraints {have7zip haveMemchan} -setup {
+    set cmd [sevenzip open [file join [testsDirectory] files testDIRS.tgz]]
+} -body {
+    join [lsort [$cmd list]] \n
+} -cleanup {
+    $cmd close
+} -result {[Content]}
+
+test lib7zip-7.3.5.1 "look into tgz (and into tar inside)" -constraints {have7zip haveMemchan} -setup {
+    set in [tcl::chan::memchan]
+    fconfigure $in -translation binary
+    set cmd1 [sevenzip open [file join [testsDirectory] files testDIRS.tgz]]
+    $cmd1 extract -c {[Content]} $in
+    seek $in 0
+} -body {
+    set cmd [sevenzip open -f tar -c $in]
+    join [lsort [$cmd list]] \n
+} -cleanup {
+    $cmd close
+    $cmd1 close
+    close $in
+} -result {testDIRS
+testDIRS/test1
+testDIRS/test2
+testDIRS/test2/test21.txt
+testDIRS/test2/test22.txt
+testDIRS/test2/test23.txt
+testDIRS/test3
+testDIRS/test3/test31
+testDIRS/test3/test32
+testDIRS/test3/test32/test321.txt
+testDIRS/test3/test33
+testDIRS/test3/test33/test331
+testDIRS/test4.txt
+testDIRS/test5.txt
+testDIRS/test6.txt}
 
 cleanupTests
