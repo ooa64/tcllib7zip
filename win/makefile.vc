@@ -20,7 +20,7 @@
 PROJECT = sevenzip
 
 !ifndef LIB7ZIP
-LIB7ZIP=..\lib7zip
+LIB7ZIP=..\..\lib7zip
 !endif
 
 !ifndef 7ZIP
