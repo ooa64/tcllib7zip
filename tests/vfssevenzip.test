@@ -45,7 +45,7 @@ test lib7zipfs-1.0 {mount params} -constraints have7zip -cleanup {
 test lib7zipfs-1.1 {mount non-existent file} -constraints have7zip -cleanup {
 } -body {
     vfs::sevenzip::Mount [file join [testsDirectory] files notexistent] mnt
-} -returnCodes 1 -result {couldn't read file "D:/Src/ooa/tcllib7zip/tests/files/notexistent": no such file or directory}
+} -returnCodes 1 -result "couldn't read file \"[file join [testsDirectory] files notexistent]\": no such file or directory"
 
 test lib7zipfs-1.2 {mount unknown file} -constraints have7zip -cleanup {
 } -body {
