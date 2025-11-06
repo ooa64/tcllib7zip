@@ -22,6 +22,8 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 #
 # using sevenzip
 #
+testConstraint usingTcl8 [expr {$tcl_version < 9.0}]
+testConstraint usingTcl9 [expr {$tcl_version >= 9.0}]
 testConstraint zipfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
 if {[testConstraint zipfs]} {
     interp alias {} vfs::zip::Mount {} vfs::sevenzip::Mount
@@ -102,7 +104,7 @@ test vfsZip-1.5 "glob files" -constraints {zipfs zipexe} -setup {
     vfs::unmount local
 } -result {Aleph One.txt Two.txt}
 
-test vfsZip-1.6 "glob non-present files" -constraints {zipfs zipexe} -setup {
+test vfsZip-1.6 "glob non-present files" -constraints {zipfs zipexe usingTcl8} -setup {
     vfs::zip::Mount zipfs.zip local
 } -body {
     lsort [glob -directory local/zipfs.test -tails ridikulus.txt]
@@ -110,13 +112,29 @@ test vfsZip-1.6 "glob non-present files" -constraints {zipfs zipexe} -setup {
     vfs::unmount local
 } -returnCodes {error} -result {no files matched glob pattern "ridikulus.txt"}
 
-test vfsZip-1.7 "glob non-present directory" -constraints {zipfs zipexe} -setup {
+test vfsZip-1.6 "glob non-present files" -constraints {zipfs zipexe usingTcl9} -setup {
+    vfs::zip::Mount zipfs.zip local
+} -body {
+    lsort [glob -directory local/zipfs.test -tails ridikulus.txt]
+} -cleanup {
+    vfs::unmount local
+} -result {}
+
+test vfsZip-1.7 "glob non-present directory" -constraints {zipfs zipexe usingTcl8} -setup {
     vfs::zip::Mount zipfs.zip local
 } -body {
     lsort [glob -directory local/zipfs.test/ridikulus -tails *]
 } -cleanup {
     vfs::unmount local
 } -returnCodes {error} -result {no files matched glob pattern "*"}
+
+test vfsZip-1.7 "glob non-present directory" -constraints {zipfs zipexe usingTcl9} -setup {
+    vfs::zip::Mount zipfs.zip local
+} -body {
+    lsort [glob -directory local/zipfs.test/ridikulus -tails *]
+} -cleanup {
+    vfs::unmount local
+} -result {}
 
 test vfsZip-1.8 "read file" -constraints {zipfs zipexe} -setup {
     vfs::zip::Mount zipfs.zip local
