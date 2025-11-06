@@ -1,11 +1,10 @@
+if {[lsearch [namespace children] ::tcltest] < 0} {
+    package require tcltest 2
+    namespace import ::tcltest::*
+}
+
+
 package require sevenzip
-
-package require tcltest
-namespace import ::tcltest::*
-
-testConstraint have7zip [sevenzip initialized]
-testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
-testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
 if {[info proc readFile] eq ""} {
     proc readFile {filename} {
@@ -30,6 +29,10 @@ if {[info proc writeFile] eq ""} {
         }
     }
 }
+
+testConstraint have7zip [sevenzip initialized]
+testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
+testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
 test lib7zip-1.0 {syntax} -body {
     sevenzip
@@ -187,7 +190,7 @@ test lib7zip-4.0 {command list bad syntax} -constraints have7zip -setup {
     $cmd list x x
 } -cleanup {
     $cmd close
-} -returnCodes 1 -result {bad option "x": must be -info, -nocase, -type, or --}
+} -returnCodes 1 -result {bad option "x": must be -info, -nocase, -exact, -type, or --}
 
 test lib7zip-4.1 {command list bad option} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -195,7 +198,7 @@ test lib7zip-4.1 {command list bad option} -constraints have7zip -setup {
     $cmd list -xxx * --
 } -cleanup {
     $cmd close
-} -returnCodes 1 -result {bad option "-xxx": must be -info, -nocase, -type, or --}
+} -returnCodes 1 -result {bad option "-xxx": must be -info, -nocase, -exact, -type, or --}
 
 test lib7zip-4.2 {command list bad type option} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -266,7 +269,10 @@ foreach {n c} {
     13 {*.txt}
     14 {*.*}
     15 {*}
-    16 {-nocase TEST.TXT}
+    16 {-nocase TEST.*}
+    17 {-nocase TEST.TXT}
+    18 {-exact test.txt}
+    19 {-exact -nocase TEST.TXT}
 } {
     test lib7zip-4.4.$n {command list all} -constraints have7zip -setup {
         set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -283,6 +289,7 @@ foreach {n c} {
     1 {????.xxx}
     2 {TEST.TXT}
     3 {-type d}
+    4 {-exact test.*}
 } {
     test lib7zip-4.5.$n {command list none} -constraints have7zip -setup {
         set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -526,6 +533,18 @@ test lib7zip-5.4.2 {extract data to channel} -constraints {have7zip} -setup {
     file delete $out
 } -result {test}
 
+test lib7zip-5.4.3 {extract data to memchan} -constraints {have7zip haveMemchan} -setup {
+    set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
+    set chn [tcl::chan::memchan]
+} -body {
+    $cmd extract -c test.txt $chn
+    seek $chn 0
+    read $chn
+} -cleanup {
+    close $chn
+    $cmd close
+} -result {test}
+
 test lib7zip-5.5 {extract data, destination exists} -constraints {have7zip} -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
     set out [file join [temporaryDirectory] test.txt]
@@ -719,7 +738,7 @@ testDIRS/test4.txt
 testDIRS/test5.txt
 testDIRS/test6.txt}
 
-test lib7zip-7.3.5.0 "look into tgz" -constraints {have7zip haveMemchan} -setup {
+test lib7zip-7.3.5.0 "look into tgz" -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files testDIRS.tgz]]
 } -body {
     join [lsort [$cmd list]] \n

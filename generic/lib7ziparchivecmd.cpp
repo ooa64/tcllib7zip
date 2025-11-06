@@ -9,6 +9,9 @@
 #   define DEBUGLOG(_x_)
 #endif
 
+#define LIST_MATCH_NOCASE TCL_MATCH_NOCASE
+#define LIST_MATCH_EXACT (1 << 16)
+
 // NOTE: should match lib7zip::PropertyIndexEnum
 static const char *const Lib7ZipProperties[] = {
     "packsize",
@@ -36,6 +39,7 @@ static const char *const Lib7ZipProperties[] = {
     0L
 };
 
+static int Tcl_StringCaseEqual(const char *str1, const char *str2, int nocase);
 static Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
 #ifdef _WIN32
 static std::string Path_WindowsPathToUnixPath(std::string path);
@@ -114,10 +118,10 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
 
         if (objc >= 2) {
             static const char * const options[] = {
-                "-info", "-nocase", "-type", "--", 0L
+                "-info", "-nocase", "-exact", "-type", "--", 0L
             };
             enum options {
-                opInfo, opNocase, opType, opEnd
+                opInfo, opNocase, opExact, opType, opEnd
             };
             int index;
             int flags = 0;
@@ -137,7 +141,10 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     info = true;
                     continue;
                 case opNocase:
-                    flags = TCL_MATCH_NOCASE;
+                    flags |= LIST_MATCH_NOCASE;
+                    continue;
+                case opExact:
+                    flags |= LIST_MATCH_EXACT;
                     continue;
                 case opType:
                     i++;
@@ -254,6 +261,7 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
     unsigned int count;
     if (!archive->GetItemCount(&count)) // NOTE: always OK
         return TCL_ERROR;
+
     for (unsigned int i = 0; i < count; ++i) {
         C7ZipArchiveItem *item;
         if (!archive->GetItemInfo(i, &item)) // NOTE: always OK
@@ -269,8 +277,14 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
 #else
         std::string path = convert.to_bytes(item->GetFullPath()).c_str();
 #endif
-        if (pattern && !Tcl_StringCaseMatch(path.c_str(), Tcl_GetString(pattern), flags)) {
-            continue;
+        if (pattern) {
+            if (flags & LIST_MATCH_EXACT) {
+                if (!Tcl_StringCaseEqual(path.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
+                    continue;
+            } else { 
+                if (!Tcl_StringCaseMatch(path.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
+                    continue;
+            }
         }
         if (info) {
             Tcl_Obj *propObj = Tcl_NewObj();
@@ -364,6 +378,14 @@ bool Lib7ZipArchiveCmd::Valid () {
         return true;
     Tcl_SetObjResult(tclInterp, Tcl_NewStringObj("error opening archive", -1));
     return false;
+}
+
+static int Tcl_StringCaseEqual(const char *str1, const char *str2, int nocase) {
+    Tcl_Size len1 = Tcl_NumUtfChars(str1, -1);
+    Tcl_Size len2 = Tcl_NumUtfChars(str2, -1);
+    if (len1 != len2)
+        return 0;
+    return 0 == (nocase ? Tcl_UtfNcasecmp(str1, str2, len1) : Tcl_UtfNcmp(str1, str2, len1));
 }
 
 typedef struct
