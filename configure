@@ -5048,7 +5048,7 @@ if test "${with_lib7zip+set}" = set; then :
 
 else
 
-            lib7zipdir="no"
+            lib7zipdir="../lib7zip"
 
 
 fi

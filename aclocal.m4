@@ -32,7 +32,7 @@ AC_DEFUN([TCLSEVENZIP_CHECK_LIB7ZIP], [
         ), [
             lib7zipdir="$withval"
         ], [
-            lib7zipdir="no"
+            lib7zipdir="../lib7zip"
         ]
     )
     AC_MSG_RESULT([$lib7zipdir])
