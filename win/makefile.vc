@@ -46,8 +46,15 @@ PRJ_DEFINES = $(PRJ_DEFINES) -I$(TMP_DIR)
 !if $(TCL_MAJOR_VERSION) < 9
 PRJ_DEFINES = $(PRJ_DEFINES) -DTcl_Size=int
 !endif
+
 PRJ_INCLUDES = -I$(LIB7ZIP)\src -I$(7ZIP)
-PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src 7zip.lib User32.lib OleAut32.lib
+
+!if $(DEBUG)
+PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src\Debug
+!else
+PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src\Release
+!endif
+PRJ_LIBS = $(PRJ_LIBS) 7zip.lib User32.lib OleAut32.lib
 
 # Define the standard targets
 !include "$(_RULESDIR)\targets.vc"
@@ -55,7 +62,7 @@ PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src 7zip.lib User32.lib OleAut32.lib
 # We must define a pkgindex target that will create a pkgIndex.tcl
 # file in the $(OUT_DIR) directory. We can just redirect to the
 # default-pkgindex target for our sample extension.
-pkgindex: default-pkgindex
+pkgindex: default-pkgindex-tea
 
 $(ROOT)\manifest.uuid:
    copy $(WIN_DIR)\gitmanifest.in $(ROOT)\manifest.uuid
