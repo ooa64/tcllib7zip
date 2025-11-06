@@ -22,7 +22,7 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 #
 # using sevenzip
 #
-testConstraint zipfs [expr {![catch {package require vfs::sevenzip}]}]
+testConstraint zipfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
 if {[testConstraint zipfs]} {
     interp alias {} vfs::zip::Mount {} vfs::sevenzip::Mount
 }
@@ -348,7 +348,7 @@ test vfsZip-4.1 "zip with preface code" -constraints {zipfs zipcat} -setup {
     vfs::unmount local
 } -result {File aleph one}
 
-test vfsZip-9.0 "attempt to delete mounted file" -constraints {zipfs zipexe} -setup {
+test vfsZip-9.0 "attempt to delete mounted file" -constraints {zipfs zipexe macOrPc} -setup {
     vfs::zip::Mount zipfs.zip local
 } -body {
     file delete zipfs.zip

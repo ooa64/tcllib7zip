@@ -775,4 +775,6 @@ testDIRS/test4.txt
 testDIRS/test5.txt
 testDIRS/test6.txt}
 
+
 cleanupTests
+return
