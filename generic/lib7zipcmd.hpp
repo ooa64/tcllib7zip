@@ -20,7 +20,7 @@ private:
     C7ZipLibrary lib;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
-    int Initialized ();
+    int Initialized (Tcl_Obj * dll);
     int SupportedExts (Tcl_Obj * exts);
     int LastError ();
 

@@ -30,7 +30,7 @@ if {[info proc writeFile] eq ""} {
     }
 }
 
-testConstraint have7zip [sevenzip initialized]
+testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
 testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
@@ -43,8 +43,8 @@ test lib7zip-1.1 {syntax} -body {
 } -returnCodes 1 -result {bad subcommand "xxx": must be initialized, extensions, or open}
 
 test lib7zip-1.2 {initialized syntax}  -body {
-    sevenzip initialized xxx
-} -returnCodes 1 -result {wrong # args: should be "sevenzip initialized"}
+    sevenzip initialized xxx xxx
+} -returnCodes 1 -result {wrong # args: should be "sevenzip initialized ?library?"}
 
 test lib7zip-1.3 {extensions syntax}  -body {
     sevenzip extensions xxx

@@ -33,7 +33,7 @@ if {[info proc writeFile] eq ""} {
     }
 }
 
-testConstraint have7zip [sevenzip initialized]
+testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
 testConstraint have7zipvfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 

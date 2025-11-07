@@ -22,11 +22,15 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 #
 # using sevenzip
 #
+package require sevenzip
 testConstraint usingTcl8 [expr {$tcl_version < 9.0}]
 testConstraint usingTcl9 [expr {$tcl_version >= 9.0}]
-testConstraint zipfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
-if {[testConstraint zipfs]} {
-    interp alias {} vfs::zip::Mount {} vfs::sevenzip::Mount
+testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
+if {[testConstraint have7zip]} {
+    testConstraint zipfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
+    if {[testConstraint zipfs]} {
+        interp alias {} vfs::zip::Mount {} vfs::sevenzip::Mount
+    }
 }
 #
 # sevenzipvfs incompatibility - using tclvfs we can't distinguish 1) from 2)
