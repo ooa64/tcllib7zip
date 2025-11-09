@@ -71,11 +71,18 @@ $(ROOT)\manifest.uuid:
 $(TMP_DIR)\tclsevenzipUuid.h:	$(ROOT)\manifest.uuid
 	copy $(WIN_DIR)\tclsevenzipUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tclsevenzipUuid.h
 
+7z.dll: $(OUT_DIR)\7z.dll
+$(OUT_DIR)\7z.dll:
+ 	cd $(7ZIP)\CPP\7zip\Bundles\Format7zF && nmake O=sevenzip
+	copy $(7ZIP)\CPP\7zip\Bundles\Format7zF\sevenzip\7z.dll $@ 
+
 # The default install target only installs binaries and scripts so add
 # an additional target for our documentation. Note this *adds* a target
 # since no commands are listed after it. The original targets for
 # install (from targets.vc) will remain.
 install: default-install-docs-n
+	-@$(CPY) "$(DOCDIR)\*.md" "$(DOC_INSTALL_DIR)"
+	-@$(CPY) "$(OUT_DIR)\7z.dll" "$(LIB_INSTALL_DIR)"
 
 # Explicit dependency rules
 $(GENERICDIR)\tclsevenzip.cpp : $(GENERICDIR)\lib7zipcmd.hpp $(GENERICDIR)\tclcmd.hpp $(TMP_DIR)\tclsevenzipUuid.h
