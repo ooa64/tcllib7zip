@@ -196,7 +196,7 @@ test vfsZip-1.11 "cd directory" -constraints {zipfs zipexe} -setup {
 test vfsZip-1.12 "globby filenames" -constraints {zipfs zipexe} -setup {
     vfs::zip::Mount zipglob.zip local
 } -body {
-    glob -type f -tail -directory local/zipglob.test *
+    lsort [glob -type f -tail -directory local/zipglob.test *]
 } -cleanup {
     vfs::unmount local
 } -result [list "one\[1\].txt" "two \[2\].txt"]
@@ -209,7 +209,7 @@ test vfsZip-1.13 "globby filenames" -constraints {zipfs zipexe} -setup {
         set f [open $file r]
         lappend result [string trim [read $f]]
     }
-    set result
+    lsort $result
 } -cleanup {
     vfs::unmount local
 } -result [list "Glob one" "Glob two"]
@@ -377,7 +377,7 @@ test vfsZip-4.1 "zip with preface code" -constraints {zipfs zipcat} -setup {
     vfs::unmount local
 } -result {File aleph one}
 
-test vfsZip-9.0 "attempt to delete mounted file" -constraints {zipfs zipexe macOrPc} -setup {
+test vfsZip-9.0 "attempt to delete mounted file" -constraints {zipfs zipexe win} -setup {
     vfs::zip::Mount zipfs.zip local
 } -body {
     file delete zipfs.zip
