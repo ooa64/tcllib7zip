@@ -17,8 +17,17 @@
 # have been added in a customized configure script.
 #========================================================================
 
-#HELLOTCL_NEW_VAR	= @HELLOTCL_NEW_VAR@
 CFLAGS_DEBUGLOG = @CFLAGS_DEBUGLOG@ 
+
+ifeq ($(CFLAGS_DEBUGLOG),)
+MFLAGS_7ZIP =
+out7zipdir = sevenzip-release
+else
+MFLAGS_7ZIP = DEBUG_BUILD=1
+out7zipdir = sevenzip-debug
+endif
+src7zipdir = @src7zipdir@
+dll7zip = 7z.so
 
 #========================================================================
 # Nothing of the variables below this line should need to be changed.
@@ -331,6 +340,16 @@ tclsevenzipUuid.h:	$(srcdir)/manifest.uuid
 	cat $(srcdir)/manifest.uuid >>$@
 	echo "" >>$@
 
+tclsevenzip.o: tclsevenzip.cpp lib7zipcmd.hpp tclcmd.hpp tclsevenzipUuid.h
+lib7zipcmd.o: lib7zipcmd.cpp lib7zipcmd.hpp tclcmd.hpp
+lib7ziparchivecmd.o: lib7ziparchivecmd.cpp lib7ziparchivecmd.hpp tclcmd.hpp
+lib7zipstream.o: lib7zipstream.cpp lib7zipstream.hpp
+tclcmd.o: tclcmd.hpp 
+
+$(srcdir)/$(dll7zip):
+	(cd $(src7zipdir)/CPP/7zip/Bundles/Format7zF && make -f makefile.gcc $(MFLAGS_7ZIP) O=$(out7zipdir))
+	cp $(src7zipdir)/CPP/7zip/Bundles/Format7zF/$(out7zipdir)/$(dll7zip) $@
+
 #========================================================================
 # Distribution creation
 # You may need to tweak this target to make it work correctly.
@@ -394,11 +413,13 @@ clean:
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
 	-rm -f *.$(OBJEXT) core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+	-rm -f $(srcdir)/$(dll7zip)
 
 distclean: clean
 	-rm -f *.tab.c
 	-rm -f $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log config.status
+	-rm -fr $(src7zipdir)/CPP/7zip/Bundles/Format7zF/$(out7zipdir)
 
 #========================================================================
 # Install binary object libraries.  On Windows this includes both .dll and
@@ -438,6 +459,7 @@ install-lib-binaries: binaries
 	    echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
 	    $(INSTALL_DATA) pkgIndex.tcl "$(DESTDIR)$(pkglibdir)"; \
 	fi
+	-$(INSTALL_LIBRARY) $(srcdir)/$(dll7zip) "$(DESTDIR)$(pkglibdir)"
 
 #========================================================================
 # Install binary executables (e.g. .exe files and dependent .dll files)

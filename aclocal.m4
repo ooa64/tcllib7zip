@@ -50,7 +50,7 @@ AC_DEFUN([TCLSEVENZIP_CHECK_LIB7ZIP], [
     fi
 
     AC_MSG_CHECKING([for 7zip source directory])
-    AC_ARG_WITH([src7zipdir],
+    AC_ARG_WITH([7zip],
         AS_HELP_STRING([--with-7zip=<dir>],
             [path to the 7zip source directory]
         ), [
@@ -85,5 +85,6 @@ AC_DEFUN([TCLSEVENZIP_CHECK_LIB7ZIP], [
     fi
     if test "$src7zipdir" != "no"; then
         TEA_ADD_INCLUDES([-I\"`${CYGPATH} $src7zipdir`\"])
+        AC_SUBST(src7zipdir)
     fi
 ])

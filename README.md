@@ -19,7 +19,7 @@ installation:
 
 	git clone -b dev https://github.com/ooa64/lib7zip
 	cd lib7zip
-        git submodule update --init --single-branch
+	git submodule update --init --single-branch
 	mkdir build
 	cd build
 	cmake .. -DBUILD_SHARED_LIB=OFF
@@ -30,6 +30,8 @@ installation:
 	cd tcllib7zip
 	./configure
 	make
+	make 7z.so
+	make test
 	sudo make install	
 
 usage:
@@ -43,7 +45,3 @@ usage:
 	test.txt
 	% $cmd extract -c test.txt stdout
 	test
-
-NOTE: use 7z.dll/7z.so from original 7zip distribution
-
-HINT: cd lib7zip/third_party/7zip/CPP/7zip/Bundles/Format7zF; make -f makefile.gcc; sudo cp _o/7z.so /usr/local/lib
