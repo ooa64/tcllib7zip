@@ -1,0 +1,26 @@
+if {[lsearch [namespace children] ::tcltest] < 0} {
+    package require tcltest 2
+    namespace import ::tcltest::*
+}
+
+
+package require sevenzip
+catch {
+    if {[info exist env(7ZDLL)]} {
+        sevenzip initialize $env(7ZDLL)
+    } else {
+        sevenzip initialize            
+    }
+}
+
+testConstraint have7zip [sevenzip isinitialized]
+
+test zzzrenamebug-1.0-DESTROY_ARCHIVE_BUG {dont crash after sevenzip deleted} -constraints {have7zip} -body {
+    set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
+    rename sevenzip ""
+    $cmd close
+} -returnCodes 1 -result {invalid command name "sevenzip?*"} -match glob
+
+
+cleanupTests
+return

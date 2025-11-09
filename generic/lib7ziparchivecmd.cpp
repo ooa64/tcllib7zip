@@ -9,6 +9,8 @@
 #   define DEBUGLOG(_x_)
 #endif
 
+#define DESTROY_ARCHIVE_BUG
+
 #define LIST_MATCH_NOCASE TCL_MATCH_NOCASE
 #define LIST_MATCH_EXACT (1 << 16)
 
@@ -45,27 +47,49 @@ static Int64 Time_FileTimeToUnixTime64(UInt64 filetime);
 static std::string Path_WindowsPathToUnixPath(std::string path);
 #endif
 
-Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
+Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name, TclCmd *parent,
         C7ZipArchive *archive, Lib7ZipInStream *stream):
-        TclCmd(interp, name), archive(archive), stream(stream), volumes(NULL), convert() {
+        TclCmd(interp, name, parent), archive(archive), stream(stream), volumes(NULL), convert() {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", stream " << stream);
 };
 
-Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
+Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name, TclCmd *parent,
         C7ZipArchive *archive, Lib7ZipMultiVolumes *volumes):
-        TclCmd(interp, name), archive(archive), stream(NULL), volumes(volumes), convert() {
+        TclCmd(interp, name, parent), archive(archive), stream(NULL), volumes(volumes), convert() {
     DEBUGLOG("Lib7ZipArchiveCmd, archive " << archive << ", volumes " << volumes);
 };
 
 Lib7ZipArchiveCmd::~Lib7ZipArchiveCmd () {
     DEBUGLOG("~Lib7ZipArchiveCmd, archive " << archive << ", stream " << stream << ", volumes " << volumes);
+#ifndef DESTROY_ARCHIVE_BUG
+    // FIXME: tcl script crashes on 'rename sevenzip ""'
+    // WORKAROUND: to reduce memory leaks
+    // - call archive->Close in Cleanup for 'rename sevenzipXXX ""  
+    // - call archive->Close in cmClose handler for 'sevenzipXXX close'
+    //
+    DEBUGLOG("~Lib7ZipArchiveCmd, archive destroyer call");
+    // NOTE: crashes in C7ZipArchiveImpl::Close when called from parent destructor
+    // if (archive)
+    //     archive->Close();
+    //    
+    // NOTE: crashes in CMyComPtr<IInArchive>::Release when called the parent destructor
     if (archive)
         delete archive;
+#endif    
     if (stream)
         delete stream;
     if (volumes)
         delete volumes;
 }
+
+void Lib7ZipArchiveCmd::Cleanup() {
+#ifdef DESTROY_ARCHIVE_BUG
+    DEBUGLOG("Lib7ZipArchiveCmd::Cleanup, close archive " << archive);
+    // NOTE: see notes for destructor
+    if (archive)
+        archive->Close();
+#endif    
+};
 
 int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
     static const char *const commands[] = {
@@ -218,6 +242,12 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
             Tcl_WrongNumArgs(tclInterp, 2, objv, NULL);
             return TCL_ERROR;
         } else {
+#ifdef DESTROY_ARCHIVE_BUG
+            // NOTE: see notes for destructor
+            DEBUGLOG("Lib7ZipArchiveCmd::Command cmClose, close archive " << archive);
+            if (archive)
+                archive->Close();
+#endif
             delete this;
         }
         break;

@@ -13,10 +13,10 @@ class Lib7ZipArchiveCmd : public TclCmd {
 
 public:
 
-    Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
+    Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name, TclCmd *parent,
         C7ZipArchive *archive, Lib7ZipInStream *stream);
 
-    Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name,
+    Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name, TclCmd *parent,
         C7ZipArchive *archive, Lib7ZipMultiVolumes *volumes);
 
     virtual ~Lib7ZipArchiveCmd();
@@ -35,6 +35,7 @@ private:
     bool Valid ();
 
     virtual int Command (int objc, Tcl_Obj * const objv[]);
+    virtual void Cleanup();
 };
 
 #endif
