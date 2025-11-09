@@ -23,9 +23,16 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 # using sevenzip
 #
 package require sevenzip
+catch {
+    if {[info exist env(7ZDLL)]} {
+        sevenzip initialize $env(7ZDLL)
+    } else {
+        sevenzip initialize            
+    }
+}
 testConstraint usingTcl8 [expr {$tcl_version < 9.0}]
 testConstraint usingTcl9 [expr {$tcl_version >= 9.0}]
-testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
+testConstraint have7zip [sevenzip isinitialized]
 if {[testConstraint have7zip]} {
     testConstraint zipfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
     if {[testConstraint zipfs]} {

@@ -5,6 +5,13 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 
 
 package require sevenzip
+catch {
+    if {[info exist env(7ZDLL)]} {
+        sevenzip initialize $env(7ZDLL)
+    } else {
+        sevenzip initialize            
+    }
+}
 
 if {[info proc readFile] eq ""} {
     proc readFile {filename} {
@@ -30,7 +37,7 @@ if {[info proc writeFile] eq ""} {
     }
 }
 
-testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
+testConstraint have7zip [sevenzip isinitialized]
 testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
@@ -40,11 +47,15 @@ test lib7zip-1.0 {syntax} -body {
 
 test lib7zip-1.1 {syntax} -body {
     sevenzip xxx
-} -returnCodes 1 -result {bad subcommand "xxx": must be initialized, extensions, or open}
+} -returnCodes 1 -result {bad subcommand "xxx": must be initialize, isinitialized, extensions, or open}
 
-test lib7zip-1.2 {initialized syntax}  -body {
-    sevenzip initialized xxx xxx
-} -returnCodes 1 -result {wrong # args: should be "sevenzip initialized ?library?"}
+test lib7zip-1.2 {initialize syntax}  -body {
+    sevenzip initialize xxx xxx
+} -returnCodes 1 -result {wrong # args: should be "sevenzip initialize ?library?"}
+
+test lib7zip-1.2.1 {initialized syntax}  -body {
+    sevenzip isinitialized xxx
+} -returnCodes 1 -result {wrong # args: should be "sevenzip isinitialized"}
 
 test lib7zip-1.3 {extensions syntax}  -body {
     sevenzip extensions xxx
@@ -82,9 +93,9 @@ test lib7zip-1.11 {open syntax} -body {
     sevenzip open -password xxx
 } -returnCodes 1 -result {"-password" option must be followed by password}
 
-test lib7zip-2.0 {initialize} {
-    sevenzip initialized
-} {1}
+test lib7zip-2.0 {initialized} -body {
+    sevenzip isinitialized
+} -result 1
 
 test lib7zip-2.1 {extensions} -constraints have7zip -body {
     sevenzip extensions
@@ -774,6 +785,46 @@ testDIRS/test3/test33/test331
 testDIRS/test4.txt
 testDIRS/test5.txt
 testDIRS/test6.txt}
+
+test lib7zip-9.0 {init in the child interp} -constraints {have7zip} -setup {
+    interp create i
+} -body {
+    interp eval i {
+        package require sevenzip
+        expr {[llength [sevenzip extensions]] > 0}
+    }
+} -cleanup {
+    interp delete i
+} -result {1}
+
+test lib7zip-9.1 {read in the child interp} -constraints {have7zip} -setup {
+    interp create i
+    set out [file join [temporaryDirectory] test.txt]
+} -body {
+    interp eval i [list apply {{in out} {
+        package require sevenzip
+        set cmd [sevenzip open $in]
+        $cmd extract test.txt $out
+        $cmd close
+    }} [file join [testsDirectory] files test.7z] $out]
+    readFile $out
+} -cleanup {
+    file delete $out
+    interp delete i
+} -result {test}
+
+test lib7zip-9.2-DESTROY_ARCHIVE_BUG {drop sevenzip in the child interp} -constraints {have7zip} -setup {
+    interp create i
+} -body {
+    interp eval i [list apply {{in} {
+        package require sevenzip
+        set cmd [sevenzip open $in]
+        rename sevenzip ""
+        $cmd close
+    }} [file join [testsDirectory] files test.7z]]
+} -cleanup {
+    interp delete i
+} -returnCodes 1 -result {invalid command name "sevenzip?*"} -match glob
 
 
 cleanupTests

@@ -9,6 +9,14 @@ if {[lsearch [namespace children] ::tcltest] < 0} {
 
 package require sevenzip
 
+catch {
+    if {[info exist env(7ZDLL)]} {
+        sevenzip initialize $env(7ZDLL)
+    } else {
+        sevenzip initialize            
+    }
+}
+
 if {[info proc readFile] eq ""} {
     proc readFile {filename} {
         set f [open $filename "r"]
@@ -33,7 +41,7 @@ if {[info proc writeFile] eq ""} {
     }
 }
 
-testConstraint have7zip [sevenzip initialized [expr {[info exist env(7ZDLL)] ? $env(7ZDLL) : "7z[info shared]"}]]
+testConstraint have7zip [sevenzip isinitialized]
 testConstraint have7zipvfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 

@@ -11,10 +11,10 @@
 
 int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
     static const char *const commands[] = {
-        "initialized", "extensions", "open", 0L
+        "initialize", "isinitialized", "extensions", "open", 0L
     };
     enum commands {
-        cmInitialized, cmExtensions, cmOpen
+        cmInitialize, cmIsInitialized, cmExtensions, cmOpen
     };
     int index;
 
@@ -28,21 +28,33 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
 
     switch ((enum commands)(index)) {
 
-    case cmInitialized:
+    case cmInitialize:
 
         if (objc == 2 || objc == 3) {
-            Tcl_SetObjResult(tclInterp, Tcl_NewBooleanObj(Initialized(objc == 3 ? objv[2] : NULL) == TCL_OK));
+            if (Initialize(objc == 3 ? objv[2] : NULL) != TCL_OK)
+                return TCL_ERROR;
         } else {
             Tcl_WrongNumArgs(tclInterp, 2, objv, "?library?");
             return TCL_ERROR;
-        } 
+        }
+
+        break;
+
+    case cmIsInitialized:
+
+        if (objc == 2) {
+            Tcl_SetObjResult(tclInterp, Tcl_NewBooleanObj(lib.IsInitialized()));
+        } else {
+            Tcl_WrongNumArgs(tclInterp, 2, objv, NULL);
+            return TCL_ERROR;
+        }
 
         break;
 
     case cmExtensions:
 
         if (objc == 2) {
-            if (Initialized(NULL) != TCL_OK)
+            if (!lib.IsInitialized() && Initialize(NULL) != TCL_OK)
                 return TCL_ERROR;
             if (SupportedExts(Tcl_GetObjResult(tclInterp)) != TCL_OK) {
                 return TCL_ERROR;
@@ -115,7 +127,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                 return TCL_ERROR;
             }
 
-            if (Initialized(NULL) != TCL_OK)
+            if (!lib.IsInitialized() && Initialize(NULL) != TCL_OK)
                 return TCL_ERROR;
 
             static unsigned long archiveCounter = 0;
@@ -133,7 +145,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     return TCL_ERROR;
                 }
                 archiveObj = Tcl_ObjPrintf("sevenzip%lu", archiveCounter++);
-                new Lib7ZipArchiveCmd(tclInterp, Tcl_GetString(archiveObj), archive, volumes);
+                new Lib7ZipArchiveCmd(tclInterp, Tcl_GetString(archiveObj), this, archive, volumes);
             } else {
                 Lib7ZipInStream *stream = new Lib7ZipInStream(tclInterp, objv[objc-1], forcetype, usechannel);
                 if (!stream->Valid()) {
@@ -146,7 +158,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     return TCL_ERROR;
                 }
                 archiveObj = Tcl_ObjPrintf("sevenzip%lu", archiveCounter++);
-                new Lib7ZipArchiveCmd(tclInterp, Tcl_GetString(archiveObj), archive, stream);
+                new Lib7ZipArchiveCmd(tclInterp, Tcl_GetString(archiveObj), this, archive, stream);
             }
             Tcl_SetObjResult(tclInterp, archiveObj);
         } else {
@@ -161,13 +173,16 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
     return TCL_OK;
 };
 
-int Lib7ZipCmd::Initialized (Tcl_Obj * dll) {
+int Lib7ZipCmd::Initialize (Tcl_Obj *dll) {
+    if (lib.IsInitialized()) {
+        Tcl_SetObjResult(tclInterp, Tcl_NewStringObj("already initialized", -1));
+        return TCL_ERROR;
+    }
     if (dll) {
-        lib.Deinitialize();
         if (lib.Initialize(convert.from_bytes(Tcl_GetString(dll)).c_str())) {
             return TCL_OK;
         }
-    } else if (lib.IsInitialized() || lib.Initialize()) {
+    } else if (lib.Initialize()) {
         return TCL_OK;
     }
     Tcl_SetObjResult(tclInterp, Tcl_NewStringObj("error loading 7z library", -1));
