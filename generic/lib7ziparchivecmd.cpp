@@ -62,19 +62,18 @@ Lib7ZipArchiveCmd::Lib7ZipArchiveCmd (Tcl_Interp *interp, const char *name, TclC
 Lib7ZipArchiveCmd::~Lib7ZipArchiveCmd () {
     DEBUGLOG("~Lib7ZipArchiveCmd, archive " << archive << ", stream " << stream << ", volumes " << volumes);
 #ifndef DESTROY_ARCHIVE_BUG
-    // FIXME: tcl script crashes on 'rename sevenzip ""'
-    // WORKAROUND: to reduce memory leaks
-    // - call archive->Close in Cleanup for 'rename sevenzipXXX ""  
-    // - call archive->Close in cmClose handler for 'sevenzipXXX close'
-    //
-    DEBUGLOG("~Lib7ZipArchiveCmd, archive destroyer call");
-    // NOTE: crashes in C7ZipArchiveImpl::Close when called from parent destructor
-    // if (archive)
-    //     archive->Close();
-    //    
-    // NOTE: crashes in CMyComPtr<IInArchive>::Release when called the parent destructor
-    if (archive)
+    // FIXME: tcl script crashes after 'rename sevenzip ""' when TclCmd destructs children.
+    // WORKAROUND: do not close/delete archive here but
+    // - close/delete archive in Cleanup for 'rename sevenzipXXX ""'  
+    // - close/delete archive in Command cmClose handler for 'sevenzipXXX close'
+    if (archive) {
+        // It looks like the archive variable here may be invalid
+        DEBUGLOG("~Lib7ZipArchiveCmd, to destroy the archive");
+        // Crash in C7ZipArchiveImpl::Close when called from parent destructor
+        archive->Close();
+        // Crash in CMyComPtr<IInArchive>::Release when called from parent destructor
         delete archive;
+    }
 #endif    
     if (stream)
         delete stream;
@@ -84,10 +83,12 @@ Lib7ZipArchiveCmd::~Lib7ZipArchiveCmd () {
 
 void Lib7ZipArchiveCmd::Cleanup() {
 #ifdef DESTROY_ARCHIVE_BUG
-    DEBUGLOG("Lib7ZipArchiveCmd::Cleanup, close archive " << archive);
-    // NOTE: see notes for destructor
-    if (archive)
+    DEBUGLOG("Lib7ZipArchiveCmd::Cleanup, close/delete archive " << archive);
+    if (archive) {
         archive->Close();
+        delete archive;
+        archive = NULL;
+    }
 #endif    
 };
 
@@ -242,12 +243,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
             Tcl_WrongNumArgs(tclInterp, 2, objv, NULL);
             return TCL_ERROR;
         } else {
-#ifdef DESTROY_ARCHIVE_BUG
-            // NOTE: see notes for destructor
-            DEBUGLOG("Lib7ZipArchiveCmd::Command cmClose, close archive " << archive);
-            if (archive)
-                archive->Close();
-#endif
+            Cleanup();
             delete this;
         }
         break;

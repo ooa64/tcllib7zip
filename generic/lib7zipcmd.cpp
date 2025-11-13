@@ -54,7 +54,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
     case cmExtensions:
 
         if (objc == 2) {
-            if (!lib.IsInitialized() && Initialize(NULL) != TCL_OK)
+            if (!lib.IsInitialized() && (Initialize(NULL) != TCL_OK))
                 return TCL_ERROR;
             if (SupportedExts(Tcl_GetObjResult(tclInterp)) != TCL_OK) {
                 return TCL_ERROR;
@@ -127,7 +127,7 @@ int Lib7ZipCmd::Command (int objc, Tcl_Obj *const objv[]) {
                 return TCL_ERROR;
             }
 
-            if (!lib.IsInitialized() && Initialize(NULL) != TCL_OK)
+            if (!lib.IsInitialized() && (Initialize(NULL) != TCL_OK))
                 return TCL_ERROR;
 
             static unsigned long archiveCounter = 0;
