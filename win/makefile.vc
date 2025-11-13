@@ -54,7 +54,7 @@ PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src\Debug
 !else
 PRJ_LIBS = -LIBPATH:$(LIB7ZIP)\build\src\Release
 !endif
-PRJ_LIBS = $(PRJ_LIBS) 7zip.lib User32.lib OleAut32.lib
+PRJ_LIBS = $(PRJ_LIBS) -LIBPATH:$(LIB7ZIP)\build\src 7zip.lib User32.lib OleAut32.lib
 
 # Define the standard targets
 !include "$(_RULESDIR)\targets.vc"
