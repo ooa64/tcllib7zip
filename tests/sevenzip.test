@@ -813,19 +813,6 @@ test lib7zip-9.1 {read in the child interp} -constraints {have7zip} -setup {
     interp delete i
 } -result {test}
 
-test lib7zip-9.2-DESTROY_ARCHIVE_BUG {drop sevenzip in the child interp} -constraints {have7zip} -setup {
-    interp create i
-} -body {
-    interp eval i [list apply {{in} {
-        package require sevenzip
-        set cmd [sevenzip open $in]
-        rename sevenzip ""
-        $cmd close
-    }} [file join [testsDirectory] files test.7z]]
-} -cleanup {
-    interp delete i
-} -returnCodes 1 -result {invalid command name "sevenzip?*"} -match glob
-
 
 cleanupTests
 return

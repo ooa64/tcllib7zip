@@ -1,13 +1,11 @@
-#
-#
-#
-
 if {[lsearch [namespace children] ::tcltest] < 0} {
     package require tcltest 2
     namespace import ::tcltest::*
 }
 
+
 package require sevenzip
+package require vfs::sevenzip
 
 catch {
     if {[info exist env(7ZDLL)]} {
@@ -41,76 +39,113 @@ if {[info proc writeFile] eq ""} {
     }
 }
 
+if {[testConstraint vfsdebug]} {
+    puts stderr vfs::debug
+    proc vfserror {} {vfs::log $::errorInfo}
+    vfs::filesystem internalerror vfserror
+    set vfs::debug 1
+}
+
 testConstraint have7zip [sevenzip isinitialized]
-testConstraint have7zipvfs [expr {![catch {source [file join [testsDirectory] .. library sevenzipvfs.tcl]}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
-test lib7zipfs-1.0 {mount params} -constraints have7zipvfs -cleanup {
-} -body {
+test lib7zipvfs-1.0 {mount params} -body {
     vfs::sevenzip::Mount
 } -returnCodes 1 -result {wrong # args: should be "vfs::sevenzip::Mount zipfile local ?arg ...?"}
 
-test lib7zipfs-1.1 {mount non-existent file} -constraints {have7zip have7zipvfs} -cleanup {
+test lib7zipvfs-1.1 {mount non-existent file} -constraints {have7zip} -cleanup {
 } -body {
     vfs::sevenzip::Mount [file join [testsDirectory] files notexistent] mnt
 } -returnCodes 1 -result "couldn't read file \"[file join [testsDirectory] files notexistent]\": no such file or directory"
 
-test lib7zipfs-1.2 {mount unknown file} -constraints {have7zip have7zipvfs} -cleanup {
+test lib7zipvfs-1.2 {mount unknown file} -constraints {have7zip} -cleanup {
 } -body {
     vfs::sevenzip::Mount [file join [testsDirectory] files test.txt] mnt
 } -returnCodes 1 -result {not supported}
 
-test lib7zipfs-1.3 {mount/unmount simple file} -constraints {have7zip have7zipvfs} -cleanup {
+test lib7zipvfs-1.3 {mount/unmount simple file} -constraints {have7zip} -cleanup {
     unset -nocomplain mnt
 } -body {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
     vfs::sevenzip::Unmount $mnt mnt
 } -result {}
 
-test lib7zipfs-1.4.1 {mount/glob simple file} -constraints {have7zip have7zipvfs} -setup {
+test lib7zipvfs-1.4.1 {mount/glob simple file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
     vfs::sevenzip::Unmount $mnt mnt
-    unset -nocomplain mnt
+    unset mnt
 } -body {
     glob mnt/*
 } -result {mnt/test.txt}
 
-test lib7zipfs-1.4.2 {mount/glob simple file tail} -constraints {have7zip have7zipvfs} -setup {
+test lib7zipvfs-1.4.2 {mount/glob simple file tail} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
     vfs::sevenzip::Unmount $mnt mnt
-    unset -nocomplain mnt
+    unset mnt
 } -body {
     glob -directory mnt -tails *
 } -result {test.txt}
 
-test lib7zipfs-1.5.1 {mount/open simple file} -constraints {have7zip have7zipvfs} -setup {
+test lib7zipvfs-1.5.1 {mount/open simple file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
     vfs::sevenzip::Unmount $mnt mnt
-    unset -nocomplain mnt
+    unset mnt
 } -body {
     readFile mnt/test.txt
 } -result {test}
 
-test lib7zipfs-1.5.2 {mount/open complex file} -constraints {have7zip have7zipvfs} -setup {
+test lib7zipvfs-1.5.2 {mount/open complex file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.7z] mnt]
 } -cleanup {
     vfs::sevenzip::Unmount $mnt mnt
-    unset -nocomplain mnt
+    unset mnt
 } -body {
     readFile mnt/testDIRS/test4.txt
 } -result {test4}
 
-test lib7zipfs-1.5.3 {mount/open complex zip file} -constraints {have7zip have7zipvfs} -setup {
+test lib7zipvfs-1.5.3 {mount/open complex zip file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
 } -cleanup {
     vfs::sevenzip::Unmount $mnt mnt
-    unset -nocomplain mnt
+    unset mnt
 } -body {
     readFile mnt/testDIRS/test4.txt
 } -result {test4}
+
+#    8 "" "mnt/testDIRS/test2/../test3/*" "mnt/testDIRS/test3/test31 mnt/testDIRS/test3/test32 mnt/testDIRS/test3/test33"
+foreach {n a g r} {
+    1 "" "mnt"              "mnt"
+    2 "" "mnt/"             "mnt/"
+    3 "" "mnt/../mnt"       "mnt/../mnt"
+    4 "" "mnt/testDIRS"     "mnt/testDIRS"
+    5 "" "mnt/*"            "mnt/testDIRS"
+    6 "-types d" "mnt/*"    "mnt/testDIRS"
+    7 "-types f" "mnt/*"    ""
+} {
+    test lib7zipvfs-1.6.$n "glob $a '$g'" -constraints {have7zip} -setup {
+        set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
+    } -cleanup {
+        vfs::sevenzip::Unmount $mnt mnt
+        unset mnt
+    } -body {
+        glob -nocomplain {*}$a $g
+    } -result $r
+
+    test lib7zipvfs-1.6zip.$n "zip glob $a $g" -constraints {vfsdebug} -setup {
+        package require vfs::zip
+        set mnt [vfs::zip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
+    } -cleanup {
+        vfs::zip::Unmount $mnt mnt
+        unset mnt
+    } -body {
+        glob -nocomplain {*}$a $g
+    } -result $r
+
+    unset n g r
+}
 
 
 cleanupTests

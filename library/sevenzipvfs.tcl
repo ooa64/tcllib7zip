@@ -59,10 +59,10 @@ proc vfs::sevenzip::matchindirectory {zipfd path actualpath pattern type} {
     set res [$zipfd list {*}$listargs [file join $path $pattern]]
 
     if {[string length $pattern] == 0} {
-        if {$path ni $res} {
-            return [list]
+        if {$path eq "" || $path in $res} {
+            return [list $actualpath]
         }
-        set res [list {}]
+        return [list]
     }
 
     set newres [list]
