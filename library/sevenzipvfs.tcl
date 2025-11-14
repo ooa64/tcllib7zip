@@ -122,7 +122,7 @@ proc vfs::sevenzip::stat {zipfd name} {
         set sb(mode) [expr {$sb(mode) | ($isreadonly && !$isdir ? 0x16d : 0x1ff)}]
     }
     if {![info exists sb(mode)]} {
-        set sb(mode) [expr {[info exists sb(isdir)] && $sb(isdir) ? 0x816d : 0x41ff}]
+        set sb(mode) [expr {[info exists sb(isdir)] && $sb(isdir) ? 0x41ff : 0x816d}]
     }
     if {![info exists sb(type)] && [info exists sb(isdir)]} {
         set sb(type) [expr {$sb(isdir) ? "directory" : "file"}]
