@@ -222,7 +222,7 @@ test vfsZip-1.14 "globby subdir" -constraints {zipfs zipexe} -setup {
     vfs::unmount local
 } -result [list "a\[0\]"]
 
-test vfsZip-1.15 "globby subdir" -constraints {zipfs zipexe bugSevenzipGlobbySubdir} -setup {
+test vfsZip-1.15 "globby subdir" -constraints {zipfs zipexe} -setup {
     vfs::zip::Mount zipglob.zip local
 } -body {
     set result {}

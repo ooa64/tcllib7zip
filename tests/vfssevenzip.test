@@ -70,11 +70,89 @@ test lib7zipvfs-1.3 {mount/unmount simple file} -constraints {have7zip} -cleanup
     vfs::sevenzip::Unmount $mnt mnt
 } -result {}
 
+test lib7zipvfs-1.3.0 {check archive cache is clean after unmount} -constraints {have7zip} -setup {
+    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
+} -cleanup {
+    unset mnt
+} -body {
+    vfs::sevenzip::Unmount $mnt mnt
+    dict exists $vfs::sevenzip::Cache $mnt
+} -result 0
+
+test lib7zipvfs-1.3.1 {check simple archive cache} -constraints {have7zip} -setup {
+    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
+} -cleanup {
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
+} -body {
+    dict get $vfs::sevenzip::Cache $mnt
+} -result {. test.txt}
+
+test lib7zipvfs-1.3.2 {check special archive cache} -constraints {have7zip} -setup {
+    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.tgz] mnt]
+} -cleanup {
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
+} -body {
+    dict get $vfs::sevenzip::Cache $mnt
+} -result {. {{[Content]}}}
+
+test lib7zipvfs-1.3.3 {check complex archive cache} -constraints {have7zip} -setup {
+    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.7z] mnt]
+} -cleanup {
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
+} -body {
+    dict keys [dict get $vfs::sevenzip::Cache $mnt]
+} -result {. testDIRS}
+
+test lib7zipvfs-1.3.4 {check complex archive w/o dirs cache} -constraints {have7zip} -setup {
+    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.arj] mnt]
+} -cleanup {
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
+} -body {
+    dict keys [dict get $vfs::sevenzip::Cache $mnt]
+} -result {. testDIRS}
+
+foreach x {7z zip rar arj tar} {
+    foreach {n i r} {
+        1 {} {directory 1 0}
+        2 testDIRS {directory 1 0}
+        3 testDIRX {unknown 0 0}
+        4 testDIRS/test4.txt {file 0 1}
+        5 testDIRS/testX.txt {unknown 0 0}  
+    } {
+        test lib7zipvfs-1.3.5-$x.$n {check item exists in cache} -constraints {have7zip} -setup {
+            set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.$x] mnt]
+            set type "unknown"
+        } -cleanup {
+            vfs::sevenzip::Unmount $mnt mnt; unset mnt
+            unset type
+        } -body {
+            catch {set type [file type [file join mnt $i]]}
+            list $type \
+                [vfs::sevenzip::CacheDirExists $mnt $i] \
+                [vfs::sevenzip::CacheFileExists $mnt $i]
+        } -result $r
+        unset n i r
+    } 
+}
+
+foreach x {7z zip rar arj tar} {
+    test lib7zipvfs-1.3.6-$x {check files from cache} -constraints {have7zip} -setup {
+        set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.$x] mnt]
+    } -cleanup {
+        vfs::sevenzip::Unmount $mnt mnt; unset mnt
+    } -body {
+        list \
+                [lsort [vfs::sevenzip::CacheGetDir $mnt {}]] \
+                [lsort [vfs::sevenzip::CacheGetDir $mnt testDIRS/test2]] \
+                [lsort [vfs::sevenzip::CacheGetDir $mnt testDIRS/test3/test32]]
+    } -result {testDIRS {test21.txt test22.txt test23.txt} test321.txt}
+    unset x
+}
+
 test lib7zipvfs-1.4.1 {mount/glob simple file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt
-    unset mnt
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
 } -body {
     glob mnt/*
 } -result {mnt/test.txt}
@@ -82,8 +160,7 @@ test lib7zipvfs-1.4.1 {mount/glob simple file} -constraints {have7zip} -setup {
 test lib7zipvfs-1.4.2 {mount/glob simple file tail} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt
-    unset mnt
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
 } -body {
     glob -directory mnt -tails *
 } -result {test.txt}
@@ -91,8 +168,7 @@ test lib7zipvfs-1.4.2 {mount/glob simple file tail} -constraints {have7zip} -set
 test lib7zipvfs-1.5.1 {mount/open simple file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
 } -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt
-    unset mnt
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
 } -body {
     readFile mnt/test.txt
 } -result {test}
@@ -100,8 +176,7 @@ test lib7zipvfs-1.5.1 {mount/open simple file} -constraints {have7zip} -setup {
 test lib7zipvfs-1.5.2 {mount/open complex file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.7z] mnt]
 } -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt
-    unset mnt
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
 } -body {
     readFile mnt/testDIRS/test4.txt
 } -result {test4}
@@ -109,27 +184,29 @@ test lib7zipvfs-1.5.2 {mount/open complex file} -constraints {have7zip} -setup {
 test lib7zipvfs-1.5.3 {mount/open complex zip file} -constraints {have7zip} -setup {
     set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
 } -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt
-    unset mnt
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
 } -body {
     readFile mnt/testDIRS/test4.txt
 } -result {test4}
 
-#    8 "" "mnt/testDIRS/test2/../test3/*" "mnt/testDIRS/test3/test31 mnt/testDIRS/test3/test32 mnt/testDIRS/test3/test33"
 foreach {n a g r} {
     1 "" "mnt"              "mnt"
-    2 "" "mnt/"             "mnt/"
+    2 "" "mnt/"             "mnt"
     3 "" "mnt/../mnt"       "mnt/../mnt"
     4 "" "mnt/testDIRS"     "mnt/testDIRS"
     5 "" "mnt/*"            "mnt/testDIRS"
     6 "-types d" "mnt/*"    "mnt/testDIRS"
     7 "-types f" "mnt/*"    ""
+    8 "" "mnt/testDIRS/test4.txt"       "mnt/testDIRS/test4.txt"
+    9 "-dir mnt" ""                     "mnt"
+    A "-dir mnt/../mnt" ""              "mnt/../mnt"
+    C "-dir mnt/testDIRS" ""            "mnt/testDIRS"
+    D "-dir mnt/testDIRS/test4.txt" ""  "mnt/testDIRS/test4.txt"
 } {
     test lib7zipvfs-1.6.$n "glob $a '$g'" -constraints {have7zip} -setup {
         set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
     } -cleanup {
-        vfs::sevenzip::Unmount $mnt mnt
-        unset mnt
+        vfs::sevenzip::Unmount $mnt mnt; unset mnt
     } -body {
         glob -nocomplain {*}$a $g
     } -result $r
@@ -138,8 +215,7 @@ foreach {n a g r} {
         package require vfs::zip
         set mnt [vfs::zip::Mount [file join [testsDirectory] files testDIRS.zip] mnt]
     } -cleanup {
-        vfs::zip::Unmount $mnt mnt
-        unset mnt
+        vfs::zip::Unmount $mnt mnt; unset mnt
     } -body {
         glob -nocomplain {*}$a $g
     } -result $r

@@ -1,7 +1,7 @@
 #
 # using tclvfs/library/zipvfs.tcl as template
 #
-package provide vfs::sevenzip 0.1
+package provide vfs::sevenzip 0.2
 
 package require vfs
 package require sevenzip
@@ -17,10 +17,12 @@ proc vfs::sevenzip::Mount {zipfile local args} {
     set fd [sevenzip open {*}$args [::file normalize $zipfile]]
     vfs::filesystem mount $local [list ::vfs::sevenzip::handler $fd]
     vfs::RegisterMount $local [list ::vfs::sevenzip::Unmount $fd]
+    Startup $fd
     return $fd
 }
 
 proc vfs::sevenzip::Unmount {fd local} {
+    Cleanup $fd
     vfs::filesystem unmount $local
     $fd close
 }
@@ -45,34 +47,21 @@ proc vfs::sevenzip::state {zipfd args} {
 proc vfs::sevenzip::matchindirectory {zipfd path actualpath pattern type} {
     #::vfs::log [list matchindirectory $path $actualpath $pattern $type]
 
-    set file [vfs::matchFiles $type]
-    set dir [vfs::matchDirectories $type]
-    if {!$file && !$dir} {
-        return [list]
-    }
-    set listargs ""
-    if {!$dir} {
-        set listargs "-type f"
-    } elseif {!$file} {
-        set listargs "-type d"
-    }
-    set res [$zipfd list {*}$listargs [file join $path $pattern]]
-
-    if {[string length $pattern] == 0} {
-        if {$path eq "" || $path in $res} {
-            return [list $actualpath]
-        }
-        return [list]
+    # This call to zip::getdir handles empty patterns properly as asking
+    # for the existence of a single file $path only
+    set res [GetDir $zipfd $path $pattern]
+    #::vfs::log "got $res"
+    if {![string length $pattern]} {
+        if {![Exists $zipfd $path]} { return {} }
+        set res [list $actualpath]
+        set actualpath ""
     }
 
     set newres [list]
-    set dirname [expr {$path eq "" ? "." : $path}]
-    foreach p $res {
-        if {[file dirname $p] eq $dirname} {
-            lappend newres [file join $actualpath [file tail $p]]
-        }
+    foreach p [::vfs::matchCorrectTypes $type $res $actualpath] {
+        lappend newres [file join $actualpath $p]
     }
-    #::vfs::log [list got $newres]
+    #::vfs::log "got $newres"
     return $newres
 }
 
@@ -87,8 +76,13 @@ proc vfs::sevenzip::stat {zipfd name} {
     }
 
     set sblist [$zipfd list -info -exact $name]
-    #::vfs::log [list 7z [lindex $sblist 0]]
+    #::vfs::log [list sevenzip [lindex $sblist 0]]
     if {[llength $sblist] == 0} {
+        if {[DirExists $zipfd $name]} {
+            array set sb {type directory mtime 0 size 0 mode 0777 ino -1 depth 0}
+            array set sb [list name $name]
+            return [array get sb]
+        }
         vfs::filesystem posixerror $::vfs::posix(ENOENT)
     }
     array set sb [lindex $sblist 0]
@@ -147,7 +141,7 @@ proc vfs::sevenzip::access {zipfd name mode} {
     }
     # Readable, Exists and Executable are treated as 'exists'
     # Could we get more information from the archive?
-    if {[llength [$zipfd list -exact $name]]} {
+    if {[Exists $zipfd $name]} {
         return 1
     } else {
         error "No such file"
@@ -223,4 +217,106 @@ proc vfs::sevenzip::fileattributes {zipfd name args} {
 
 proc vfs::sevenzip::utime {fd path actime mtime} {
     vfs::filesystem posixerror $::vfs::posix(EROFS)
+}
+
+#
+# Some archives do not have directory entries (for example, arj or some zips)
+# Therefore, we need to create such entries in the Cache.
+#
+# Cache is a dictionary with directories as keys, files are stored in a special directory "."
+# 
+# sevenzipX { . { file1 file2 } dir1 { . {} subdir1 { . { file3 file4 } } subdir2 { . {} } } } 
+#
+# file1
+# file2
+# dir1
+#     subdir1
+#         file3
+#         file4 
+#     subdir2
+#
+
+interp alias {} vfs::sevenzip::Startup {} vfs::sevenzip::CacheCreate
+interp alias {} vfs::sevenzip::Cleanup {} vfs::sevenzip::CacheClear
+interp alias {} vfs::sevenzip::GetDir {} vfs::sevenzip::CacheGetDir
+interp alias {} vfs::sevenzip::DirExists {} vfs::sevenzip::CacheDirExists
+
+proc vfs::sevenzip::Exists {fd name} {
+    expr {[llength [$fd list -exact $name]] || [CacheDirExists $fd $name]}
+}
+
+namespace eval vfs::sevenzip {
+    set Cache [dict create]
+}
+
+proc vfs::sevenzip::CacheCreate {mnt} {
+    dict set vfs::sevenzip::Cache $mnt {. {}}
+    foreach item [$mnt list -info] {
+        if {[dict exist $item "path"]} {
+            set parts [file split [dict get $item "path"]]
+        } else {
+            set parts [list {[Content]}]
+        }
+        set path [lrange $parts 0 end-1]
+        set name [lindex $parts end]
+
+        for {set i 0} {$i < [llength $path]} {incr i} {
+            set p [lrange $path 0 $i]
+            if {![dict exists $vfs::sevenzip::Cache $mnt {*}$p]} {
+                dict set vfs::sevenzip::Cache $mnt {*}$p [list "." {}]
+            }
+        }
+        if {[dict get $item "isdir"]} {
+            if {![dict exist $vfs::sevenzip::Cache $mnt {*}$path $name]} {
+                dict set vfs::sevenzip::Cache $mnt {*}$path $name [list "." {}]
+            }
+        } else {
+            dict set vfs::sevenzip::Cache $mnt {*}$path "." [concat \
+                    [dict get $vfs::sevenzip::Cache $mnt {*}$path "."] [list $name]]
+        }
+    }
+}
+
+proc vfs::sevenzip::CacheClear {mnt} {
+    dict unset vfs::sevenzip::Cache $mnt
+}
+
+proc vfs::sevenzip::CacheDirExists {mnt item} {
+    dict exists $vfs::sevenzip::Cache $mnt {*}[file split $item] "."
+}
+
+proc vfs::sevenzip::CacheFileExists {mnt item} {
+    set parts [file split $item]
+    set path [lrange $parts 0 end-1]
+    set file [lindex $parts end]
+    if {[dict exists $vfs::sevenzip::Cache $mnt {*}$path "."]} {
+        if {[lsearch [dict get $vfs::sevenzip::Cache $mnt {*}$path "."] $file] >= 0} {
+            return 1
+        }
+    }
+    return 0
+}
+
+proc vfs::sevenzip::CacheGetDir {mnt path {pat *}} {
+    set parts [file split $path]
+    if {![dict exists $vfs::sevenzip::Cache $mnt {*}$parts "."]} {
+        return {}
+    }
+    if {$pat == ""} {
+        return [list $path]
+    }
+    set dirs [dict keys [dict get $vfs::sevenzip::Cache $mnt {*}$parts]]
+    set files [dict get $vfs::sevenzip::Cache $mnt {*}$parts "."]
+    set content [concat [lsearch -all -inline -not $dirs "."] $files]
+
+    if {$pat == "*"} {
+        return $content
+    } 
+    set rc [list]
+    foreach f $content {
+        if {[string match -nocase $pat $f]} {
+            lappend rc $f
+        }
+    }
+    return $rc
 }
