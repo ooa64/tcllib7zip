@@ -49,6 +49,9 @@ if {[testConstraint vfsdebug]} {
 testConstraint have7zip [sevenzip isinitialized]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
+set invalidTimeBugFile [file join [testsDirectory] files Microsoft.VisualStudio.Setup.TestMsi.msi] 
+testConstraint invalidTimeBug [file exists $invalidTimeBugFile]
+
 test lib7zipvfs-1.0 {mount params} -body {
     vfs::sevenzip::Mount
 } -returnCodes 1 -result {wrong # args: should be "vfs::sevenzip::Mount zipfile local ?arg ...?"}
@@ -222,6 +225,14 @@ foreach {n a g r} {
 
     unset n g r
 }
+
+test lib7zipvfs-2.1.invalidTimeBug {invalidTimeBug} -constraints {have7zip invalidTimeBug} -setup {
+    set mnt [vfs::sevenzip::Mount $invalidTimeBugFile mnt]
+} -cleanup {
+    vfs::sevenzip::Unmount $mnt mnt; unset mnt
+} -body {
+    file isfile mnt/!_Columns
+} -result {1}
 
 
 cleanupTests

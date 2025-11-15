@@ -86,7 +86,23 @@ proc vfs::sevenzip::stat {zipfd name} {
         vfs::filesystem posixerror $::vfs::posix(ENOENT)
     }
     array set sb [lindex $sblist 0]
-
+    foreach f {dev ino nlink uid gid atime mtime ctime} {
+        if {[info exists sb($f)] && ![string is integer $sb($f)]} {
+            unset sb($f)
+        }
+    }
+    foreach f {atime mtime ctime} {
+        if {[info exists sb($f)] && !([string is integer $sb($f)] && $sb($f) >= -1)} {
+            unset sb($f)
+        }
+    }
+    if {[info exists sb(mode)] && ![string is integer $sb(mode)]} {
+        # FIXME: 0..65536 ?
+        unset sb(mode)
+    }
+    if {[info exists sb(size)] && ![string is wideinteger $sb(size)]} {
+        unset sb(size)
+    }
     if {![info exists sb(mode)] && [info exists sb(attrib)]} {
         #define FILE_ATTRIBUTE_READONLY       0x0001
         #define FILE_ATTRIBUTE_HIDDEN         0x0002
@@ -246,11 +262,11 @@ proc vfs::sevenzip::Exists {fd name} {
 }
 
 namespace eval vfs::sevenzip {
-    set Cache [dict create]
+    variable Cache [dict create]
 }
 
 proc vfs::sevenzip::CacheCreate {mnt} {
-    dict set vfs::sevenzip::Cache $mnt {. {}}
+    dict set ::vfs::sevenzip::Cache $mnt {. {}}
     foreach item [$mnt list -info] {
         if {[dict exist $item "path"]} {
             set parts [file split [dict get $item "path"]]
@@ -262,35 +278,35 @@ proc vfs::sevenzip::CacheCreate {mnt} {
 
         for {set i 0} {$i < [llength $path]} {incr i} {
             set p [lrange $path 0 $i]
-            if {![dict exists $vfs::sevenzip::Cache $mnt {*}$p]} {
-                dict set vfs::sevenzip::Cache $mnt {*}$p [list "." {}]
+            if {![dict exists $::vfs::sevenzip::Cache $mnt {*}$p]} {
+                dict set ::vfs::sevenzip::Cache $mnt {*}$p [list "." {}]
             }
         }
         if {[dict get $item "isdir"]} {
-            if {![dict exist $vfs::sevenzip::Cache $mnt {*}$path $name]} {
-                dict set vfs::sevenzip::Cache $mnt {*}$path $name [list "." {}]
+            if {![dict exist $::vfs::sevenzip::Cache $mnt {*}$path $name]} {
+                dict set ::vfs::sevenzip::Cache $mnt {*}$path $name [list "." {}]
             }
         } else {
-            dict set vfs::sevenzip::Cache $mnt {*}$path "." [concat \
-                    [dict get $vfs::sevenzip::Cache $mnt {*}$path "."] [list $name]]
+            dict set ::vfs::sevenzip::Cache $mnt {*}$path "." [concat \
+                    [dict get $::vfs::sevenzip::Cache $mnt {*}$path "."] [list $name]]
         }
     }
 }
 
 proc vfs::sevenzip::CacheClear {mnt} {
-    dict unset vfs::sevenzip::Cache $mnt
+    dict unset ::vfs::sevenzip::Cache $mnt
 }
 
 proc vfs::sevenzip::CacheDirExists {mnt item} {
-    dict exists $vfs::sevenzip::Cache $mnt {*}[file split $item] "."
+    dict exists $::vfs::sevenzip::Cache $mnt {*}[file split $item] "."
 }
 
 proc vfs::sevenzip::CacheFileExists {mnt item} {
     set parts [file split $item]
     set path [lrange $parts 0 end-1]
     set file [lindex $parts end]
-    if {[dict exists $vfs::sevenzip::Cache $mnt {*}$path "."]} {
-        if {[lsearch [dict get $vfs::sevenzip::Cache $mnt {*}$path "."] $file] >= 0} {
+    if {[dict exists $::vfs::sevenzip::Cache $mnt {*}$path "."]} {
+        if {[lsearch [dict get $::vfs::sevenzip::Cache $mnt {*}$path "."] $file] >= 0} {
             return 1
         }
     }
@@ -299,14 +315,14 @@ proc vfs::sevenzip::CacheFileExists {mnt item} {
 
 proc vfs::sevenzip::CacheGetDir {mnt path {pat *}} {
     set parts [file split $path]
-    if {![dict exists $vfs::sevenzip::Cache $mnt {*}$parts "."]} {
+    if {![dict exists $::vfs::sevenzip::Cache $mnt {*}$parts "."]} {
         return {}
     }
     if {$pat == ""} {
         return [list $path]
     }
-    set dirs [dict keys [dict get $vfs::sevenzip::Cache $mnt {*}$parts]]
-    set files [dict get $vfs::sevenzip::Cache $mnt {*}$parts "."]
+    set dirs [dict keys [dict get $::vfs::sevenzip::Cache $mnt {*}$parts]]
+    set files [dict get $::vfs::sevenzip::Cache $mnt {*}$parts "."]
     set content [concat [lsearch -all -inline -not $dirs "."] $files]
 
     if {$pat == "*"} {
