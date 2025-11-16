@@ -29,8 +29,9 @@ private:
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
     int Info(Tcl_Obj *info);
-    int List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flags, bool info);
+    int List(Tcl_Obj *list, Tcl_Obj *path, Tcl_Obj *pattern, char type, int flags, bool info);
     int Extract(Tcl_Obj *source, Tcl_Obj *destination, Tcl_Obj *password, bool usechannel);
+    bool Exists(Tcl_Obj *path);    
 
     bool Valid ();
 

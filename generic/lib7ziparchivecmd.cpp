@@ -94,10 +94,10 @@ void Lib7ZipArchiveCmd::Cleanup() {
 
 int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
     static const char *const commands[] = {
-        "info", "count", "list", "extract", "close", 0L
+        "info", "count", "exists", "list", "extract", "close", 0L
     };
     enum commands {
-        cmInfo, cmCount, cmList, cmExtract, cmClose
+        cmInfo, cmCount, cmExists, cmList, cmExtract, cmClose
     };
     int index;
 
@@ -139,19 +139,33 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
         } 
         break;
 
+    case cmExists:
+
+        // TODO: -nocase option 
+        if (objc == 3) {
+            if (!Valid())
+                return TCL_ERROR;
+            Tcl_SetObjResult(tclInterp, Tcl_NewBooleanObj(Exists(objv[2])));
+        } else {
+            Tcl_WrongNumArgs(tclInterp, 2, objv, "path");
+            return TCL_ERROR;
+        } 
+        break;
+
     case cmList:
 
         if (objc >= 2) {
             static const char * const options[] = {
-                "-info", "-nocase", "-exact", "-type", "--", 0L
+                "-info", "-nocase", "-exact", "-type", "-directory", "--", 0L
             };
             enum options {
-                opInfo, opNocase, opExact, opType, opEnd
+                opInfo, opNocase, opExact, opType, opDirectory, opEnd
             };
             int index;
             int flags = 0;
             char type = 'a';
             bool info = false;
+            Tcl_Obj *pathObj = NULL;
             Tcl_Obj *patternObj = NULL;
             for (int i = 2; i < objc; i++) {
                 if (Tcl_GetIndexFromObj(tclInterp, objv[i], options, "option", 0, &index) != TCL_OK) {
@@ -181,6 +195,20 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
                     Tcl_SetObjResult(tclInterp, Tcl_NewStringObj(
                             "\"-type\" option must be followed by \"d\" or \"f\"", -1));
                     return TCL_ERROR;
+                case opDirectory:
+                    i++;
+                    if (i < objc) {
+                        if (pathObj) {
+                            Tcl_SetObjResult(tclInterp, Tcl_NewStringObj(
+                                    "\"-directory\" option may only be used once", -1));
+                            return TCL_ERROR;
+                        }
+                        pathObj = objv[i];
+                        continue;
+                    }
+                    Tcl_SetObjResult(tclInterp, Tcl_NewStringObj(
+                            "\"-directory\" option must be followed by path", -1));
+                    return TCL_ERROR;
                 case opEnd:
                     if (i == objc - 2)
                         patternObj = objv[i+1];
@@ -192,7 +220,7 @@ int Lib7ZipArchiveCmd::Command (int objc, Tcl_Obj *const objv[]) {
                 };
                 break;
             };
-            if (List(Tcl_GetObjResult(tclInterp), patternObj, type, flags, info) != TCL_OK)
+            if (List(Tcl_GetObjResult(tclInterp), pathObj, patternObj, type, flags, info) != TCL_OK)
                 return TCL_ERROR;
         } else {
             Tcl_WrongNumArgs(tclInterp, 2, objv, "?options? ?pattern?");
@@ -283,7 +311,34 @@ int Lib7ZipArchiveCmd::Info(Tcl_Obj *info) {
     return TCL_OK;
 }
 
-int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flags, bool info) {
+bool Lib7ZipArchiveCmd::Exists(Tcl_Obj *path) {
+    unsigned int count;
+    if (!archive->GetItemCount(&count)) // NOTE: always OK
+        return false;
+
+    size_t len = strlen(Tcl_GetString(path)); 
+    for (unsigned int i = 0; i < count; ++i) {
+        C7ZipArchiveItem *item;
+        if (!archive->GetItemInfo(i, &item)) // NOTE: always OK
+            return false;
+
+#ifdef _WIN32
+        std::string name = Path_WindowsPathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
+#else
+        std::string name = convert.to_bytes(item->GetFullPath()).c_str();
+#endif
+        size_t size = name.size(); 
+        if (size < len)
+            continue;
+        if (strncmp(name.c_str(), Tcl_GetString(path), len) != 0)
+            continue;
+        if (size == len || name.at(len) == '/')
+            return true;
+    }
+    return false;
+}
+
+int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *path, Tcl_Obj *pattern, char type, int flags, bool info) {
     unsigned int count;
     if (!archive->GetItemCount(&count)) // NOTE: always OK
         return TCL_ERROR;
@@ -299,16 +354,27 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
             continue;
 
 #ifdef _WIN32
-        std::string path = Path_WindowsPathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
+        std::string name = Path_WindowsPathToUnixPath(convert.to_bytes(item->GetFullPath()).c_str());
 #else
-        std::string path = convert.to_bytes(item->GetFullPath()).c_str();
+        std::string name = convert.to_bytes(item->GetFullPath()).c_str();
 #endif
+        if (path) {
+            size_t sep = name.find_last_of("/");
+            if (sep == std::string::npos) {
+                if (Tcl_GetString(path)[0] != 0)
+                    continue;
+            } else {
+                if (!Tcl_StringCaseEqual(name.substr(0, sep).c_str(), Tcl_GetString(path), flags & TCL_MATCH_NOCASE))
+                    continue;
+                name = name.substr(sep+1);
+            }
+        }
         if (pattern) {
             if (flags & LIST_MATCH_EXACT) {
-                if (!Tcl_StringCaseEqual(path.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
+                if (!Tcl_StringCaseEqual(name.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
                     continue;
             } else { 
-                if (!Tcl_StringCaseMatch(path.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
+                if (!Tcl_StringCaseMatch(name.c_str(), Tcl_GetString(pattern), flags & TCL_MATCH_NOCASE))
                     continue;
             }
         }
@@ -348,7 +414,7 @@ int Lib7ZipArchiveCmd::List(Tcl_Obj *list, Tcl_Obj *pattern, char type, int flag
             }
             Tcl_ListObjAppendElement(NULL, list, propObj);
         } else {
-            Tcl_ListObjAppendElement(NULL, list, Tcl_NewStringObj(path.c_str(), -1));
+            Tcl_ListObjAppendElement(NULL, list, Tcl_NewStringObj(name.c_str(), -1));
         }
     }
     return TCL_OK;

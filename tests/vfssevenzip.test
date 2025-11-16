@@ -73,47 +73,6 @@ test lib7zipvfs-1.3 {mount/unmount simple file} -constraints {have7zip} -cleanup
     vfs::sevenzip::Unmount $mnt mnt
 } -result {}
 
-test lib7zipvfs-1.3.0 {check archive cache is clean after unmount} -constraints {have7zip} -setup {
-    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
-} -cleanup {
-    unset mnt
-} -body {
-    vfs::sevenzip::Unmount $mnt mnt
-    dict exists $vfs::sevenzip::Cache $mnt
-} -result 0
-
-test lib7zipvfs-1.3.1 {check simple archive cache} -constraints {have7zip} -setup {
-    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files test.7z] mnt]
-} -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt; unset mnt
-} -body {
-    dict get $vfs::sevenzip::Cache $mnt
-} -result {. test.txt}
-
-test lib7zipvfs-1.3.2 {check special archive cache} -constraints {have7zip} -setup {
-    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.tgz] mnt]
-} -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt; unset mnt
-} -body {
-    dict get $vfs::sevenzip::Cache $mnt
-} -result {. {{[Content]}}}
-
-test lib7zipvfs-1.3.3 {check complex archive cache} -constraints {have7zip} -setup {
-    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.7z] mnt]
-} -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt; unset mnt
-} -body {
-    dict keys [dict get $vfs::sevenzip::Cache $mnt]
-} -result {. testDIRS}
-
-test lib7zipvfs-1.3.4 {check complex archive w/o dirs cache} -constraints {have7zip} -setup {
-    set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.arj] mnt]
-} -cleanup {
-    vfs::sevenzip::Unmount $mnt mnt; unset mnt
-} -body {
-    dict keys [dict get $vfs::sevenzip::Cache $mnt]
-} -result {. testDIRS}
-
 foreach x {7z zip rar arj tar} {
     foreach {n i r} {
         1 {} {directory 1 0}
@@ -122,33 +81,31 @@ foreach x {7z zip rar arj tar} {
         4 testDIRS/test4.txt {file 0 1}
         5 testDIRS/testX.txt {unknown 0 0}  
     } {
-        test lib7zipvfs-1.3.5-$x.$n {check item exists in cache} -constraints {have7zip} -setup {
+        test lib7zipvfs-1.3.5-$x.$n {check archive item exists} -constraints {have7zip} -setup {
             set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.$x] mnt]
             set type "unknown"
         } -cleanup {
             vfs::sevenzip::Unmount $mnt mnt; unset mnt
             unset type
         } -body {
-            catch {set type [file type [file join mnt $i]]}
-            list $type \
-                [vfs::sevenzip::CacheDirExists $mnt $i] \
-                [vfs::sevenzip::CacheFileExists $mnt $i]
+            catch {set type [file type mnt/$i]}
+            list $type [file isdir mnt/$i] [file isfile mnt/$i]
         } -result $r
         unset n i r
     } 
 }
 
 foreach x {7z zip rar arj tar} {
-    test lib7zipvfs-1.3.6-$x {check files from cache} -constraints {have7zip} -setup {
+    test lib7zipvfs-1.3.6-$x {check archive files from dir} -constraints {have7zip} -setup {
         set mnt [vfs::sevenzip::Mount [file join [testsDirectory] files testDIRS.$x] mnt]
     } -cleanup {
         vfs::sevenzip::Unmount $mnt mnt; unset mnt
     } -body {
         list \
-                [lsort [vfs::sevenzip::CacheGetDir $mnt {}]] \
-                [lsort [vfs::sevenzip::CacheGetDir $mnt testDIRS/test2]] \
-                [lsort [vfs::sevenzip::CacheGetDir $mnt testDIRS/test3/test32]]
-    } -result {testDIRS {test21.txt test22.txt test23.txt} test321.txt}
+                [lsort [glob -nocomplain -tails -dir mnt *]] \
+                [lsort [glob -nocomplain -tails -dir mnt/testDIRS *\[23456\]*]] \
+                [lsort [glob -nocomplain -tails -dir mnt/testDIRS/test3/test32 *]]
+    } -result {testDIRS {test2 test3 test4.txt test5.txt test6.txt} test321.txt}
     unset x
 }
 

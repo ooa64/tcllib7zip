@@ -41,6 +41,10 @@ testConstraint have7zip [sevenzip isinitialized]
 testConstraint haveMemchan [expr {![catch {package require tcl::chan::memchan}]}]
 testConstraint encodingOk [expr {"тест" eq "\u0442\u0435\u0441\u0442"}]
 
+test lib7zip-0.1 {version} -body {
+    package require sevenzip
+} -result 0.4
+
 test lib7zip-1.0 {syntax} -body {
     sevenzip
 } -returnCodes 1 -result {wrong # args: should be "sevenzip subcommand"}
@@ -171,7 +175,7 @@ test lib7zip-3.1 {command bad subcommand} -constraints have7zip -setup {
     $cmd xxx
 } -cleanup {
     rename $cmd ""
-} -returnCodes 1 -result {bad subcommand "xxx": must be info, count, list, extract, or close}
+} -returnCodes 1 -result {bad subcommand "xxx": must be info, count, exists, list, extract, or close}
 
 test lib7zip-3.2 {command close} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -201,7 +205,7 @@ test lib7zip-4.0 {command list bad syntax} -constraints have7zip -setup {
     $cmd list x x
 } -cleanup {
     $cmd close
-} -returnCodes 1 -result {bad option "x": must be -info, -nocase, -exact, -type, or --}
+} -returnCodes 1 -result {bad option "x": must be -info, -nocase, -exact, -type, -directory, or --}
 
 test lib7zip-4.1 {command list bad option} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -209,7 +213,7 @@ test lib7zip-4.1 {command list bad option} -constraints have7zip -setup {
     $cmd list -xxx * --
 } -cleanup {
     $cmd close
-} -returnCodes 1 -result {bad option "-xxx": must be -info, -nocase, -exact, -type, or --}
+} -returnCodes 1 -result {bad option "-xxx": must be -info, -nocase, -exact, -type, -directory, or --}
 
 test lib7zip-4.2 {command list bad type option} -constraints have7zip -setup {
     set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -284,6 +288,7 @@ foreach {n c} {
     17 {-nocase TEST.TXT}
     18 {-exact test.txt}
     19 {-exact -nocase TEST.TXT}
+    20 {-directory "" test.txt}
 } {
     test lib7zip-4.4.$n {command list all} -constraints have7zip -setup {
         set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -301,6 +306,7 @@ foreach {n c} {
     2 {TEST.TXT}
     3 {-type d}
     4 {-exact test.*}
+    5 {-directory xxx test.txt}
 } {
     test lib7zip-4.5.$n {command list none} -constraints have7zip -setup {
         set cmd [sevenzip open [file join [testsDirectory] files test.7z]]
@@ -310,6 +316,98 @@ foreach {n c} {
         $cmd close
     } -result {}
     unset n c
+}
+
+foreach {n c r} {
+    0 {-directory "" *} {testDIRS}
+    1 {-directory "testDIRS" -type d *} {test1 test2 test3}
+    2 {-directory "testDIRS" -type f *} {test4.txt test5.txt test6.txt}
+    3 {-directory "testDIRS" test[13]} {test1 test3}
+    4 {-directory "testDIRS" test[46].*} {test4.txt test6.txt}
+    5 {-directory "testDIRS/test3/test32" *} {test321.txt}
+    6 {-directory "testDIRS/test3/test33" *} {test331}
+} {
+    test lib7zip-4.6.$n {command list -directory option} -constraints have7zip -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
+    } -body {
+        $cmd list {*}$c
+    } -cleanup {
+        $cmd close
+    } -result $r
+    unset n c r
+}
+
+foreach {n c r} {
+    0 {""} {0 0}
+    1 {testDIRS} {1 1}
+    2 {testDIRS/test1} {1 1}
+    3 {testDIRS/test2} {1 1}
+    4 {testDIRS/test3} {1 1}
+    5 {testDIRS/test4.txt} {1 1}
+    6 {testDIRS/test3/test32/test321.txt} {1 1}
+    7 {testDIRS/test3/test33/xxx} {0 0}
+} {
+    test lib7zip-4.7.$n {command exists} -constraints have7zip -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files testDIRS.7z]]
+    } -body {
+        list [llength [$cmd list $c]] [$cmd exists $c]
+    } -cleanup {
+        $cmd close
+    } -result $r
+    unset n c r
+}
+
+foreach {n c r} {
+    0 {""} {0 0}
+    1 {testDIRS} {1 1}
+    2 {testDIRS/test1} {0 0}
+    3 {testDIRS/test2} {1 1}
+    4 {testDIRS/test3} {1 1}
+    5 {testDIRS/test4.txt} {1 1}
+    6 {testDIRS/test3/test32/test321.txt} {1 1}
+    7 {testDIRS/test3/test33/xxx} {0 0}
+} {
+    test lib7zip-4.7.$n {command exists (arj)} -constraints have7zip -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files testDIRS.arj]]
+    } -body {
+        list [llength [$cmd list $c]] [$cmd exists $c]
+    } -cleanup {
+        $cmd close
+    } -result $r
+    unset n c r
+}
+
+foreach x {7z zip rar arj tar} {
+    foreach {n i r} {
+        1 {} 0
+        2 testDIRS 1
+        3 testDIRX 0
+        4 testDIRS/test4.txt 1
+        5 testDIRS/testX.txt 0
+    } {
+        test lib7zip-4.8-$x.$n {check archive item exists} -constraints {have7zip} -setup {
+            set cmd [sevenzip open [file join [testsDirectory] files testDIRS.$x]]
+        } -cleanup {
+            $cmd close
+        } -body {
+            $cmd exists $i
+        } -result $r
+        unset n i r
+    }
+}
+
+foreach x {7z zip rar arj tar} {
+    test lib7zip-4.9-$x {check archive files from dir} -constraints {have7zip} -setup {
+        set cmd [sevenzip open [file join [testsDirectory] files testDIRS.$x]]
+    } -cleanup {
+        $cmd close
+    } -body {
+        list \
+                [lsort [$cmd list -dir {} *]] \
+                [lsort [$cmd list -dir testDIRS *\[23456\]*]] \
+                [lsort [$cmd list -dir testDIRS/test3/test32 *]]
+    } -result {testDIRS {test2 test3 test4.txt test5.txt test6.txt} test321.txt}
+    unset x
 }
 
 test lib7zip-4.10 {detailed list} -constraints have7zip -setup {
