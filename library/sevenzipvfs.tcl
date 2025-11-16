@@ -3,7 +3,7 @@
 #
 package provide vfs::sevenzip 0.2
 
-package require vfs
+package require vfs [expr {$tcl_version < 9.0 ? "1.4-1.4.99" : "1.5-"}]
 package require sevenzip
 
 namespace eval vfs::sevenzip {}
